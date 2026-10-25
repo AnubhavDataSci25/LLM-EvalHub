@@ -1,0 +1,24 @@
+{
+  "key": "structured_extraction",
+  "name": "Structured Field Extraction",
+  "description": "Extract a specific field from a short unstructured record (invoices, tickets, shipping notes). Answers are short and exact, so deterministic correctness is highly reliable here.",
+  "use_case": "structured_extraction",
+  "metrics": [
+    "correctness",
+    "faithfulness",
+    "latency"
+  ],
+  "rag_recommended": false,
+  "dataset": "dataset.json",
+  "documents": [],
+  "default_config": {
+    "temperature": 0.0,
+    "max_tokens": 120,
+    "system_prompt": "Extract the requested field from the record. Reply with the value only \u2014 no explanation, no units unless they appear in the record, no punctuation beyond what the value contains."
+  },
+  "metric_notes": {
+    "correctness": "Exact-match style task \u2014 the deterministic evaluator is a strong signal and no judge is needed.",
+    "faithfulness": "Catches values invented when the field is genuinely absent.",
+    "latency": "Extraction usually runs in bulk, so per-record latency compounds."
+  }
+}

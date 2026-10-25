@@ -1,0 +1,41 @@
+# Local full-stack environment. For production, replace the dev servers with a
+# process manager and serve the built frontend from a static host or CDN.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: evalhub
+      POSTGRES_PASSWORD: evalhub
+      POSTGRES_DB: evalhub
+    ports: ['5432:5432']
+    volumes: ['pgdata:/var/lib/postgresql/data']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U evalhub']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://evalhub:evalhub@db:5432/evalhub
+      CORS_ORIGINS: http://localhost:5173
+      # Provider keys are read from a .env file that is never baked into the image.
+    env_file: [./backend/.env]
+    ports: ['8000:8000']
+    depends_on:
+      db: { condition: service_healthy }
+    volumes:
+      - ./benchmarks:/app/benchmarks:ro
+      - storage:/app/storage
+
+  web:
+    build: ./frontend
+    environment:
+      VITE_PROXY_TARGET: http://api:8000
+    ports: ['5173:5173']
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  storage:

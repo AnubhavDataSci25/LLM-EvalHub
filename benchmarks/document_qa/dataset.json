@@ -1,0 +1,254 @@
+{
+  "test_cases": [
+    {
+      "id": "hr-001",
+      "question": "How many annual leave days do full-time employees accrue per year?",
+      "ground_truth": "20 days per calendar year.",
+      "category": "leave",
+      "difficulty": "easy",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-002",
+      "question": "At what rate does annual leave accrue each month?",
+      "ground_truth": "1.667 days per completed month of service.",
+      "category": "leave",
+      "difficulty": "medium",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-003",
+      "question": "How many unused annual leave days can be carried over, and by when must they be used?",
+      "ground_truth": "Up to 5 days, which must be used by 31 March or they are forfeited.",
+      "category": "leave",
+      "difficulty": "medium",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-004",
+      "question": "When is a medical certificate required for sick leave?",
+      "ground_truth": "From the fourth consecutive day of absence.",
+      "category": "leave",
+      "difficulty": "medium",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-005",
+      "question": "Does unused sick leave carry over to the next year?",
+      "ground_truth": "No, unused sick leave does not carry over.",
+      "category": "leave",
+      "difficulty": "easy",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-006",
+      "question": "How much parental leave does a primary caregiver receive?",
+      "ground_truth": "18 weeks at full pay.",
+      "category": "leave",
+      "difficulty": "easy",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-007",
+      "question": "When does parental leave eligibility begin?",
+      "ground_truth": "After 12 months of continuous service.",
+      "category": "leave",
+      "difficulty": "medium",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-008",
+      "question": "How many days of bereavement leave apply for an extended family member?",
+      "ground_truth": "2 days.",
+      "category": "leave",
+      "difficulty": "medium",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-009",
+      "question": "What are the core collaboration hours?",
+      "ground_truth": "10:00 to 15:00 in the employee's local time zone.",
+      "category": "working",
+      "difficulty": "easy",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-010",
+      "question": "How many days per week can employees work remotely by default?",
+      "ground_truth": "Up to 3 days per week.",
+      "category": "working",
+      "difficulty": "easy",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-011",
+      "question": "What is required for a fully remote arrangement?",
+      "ground_truth": "Director approval and a signed remote-work agreement.",
+      "category": "working",
+      "difficulty": "medium",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-012",
+      "question": "How far in advance must a working-pattern change be requested?",
+      "ground_truth": "At least 30 days before the intended start date.",
+      "category": "working",
+      "difficulty": "medium",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-013",
+      "question": "What is the deadline for submitting an expense claim?",
+      "ground_truth": "Within 60 days of the expense being incurred.",
+      "category": "expenses",
+      "difficulty": "easy",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-014",
+      "question": "What happens to an expense claim submitted after the deadline?",
+      "ground_truth": "It requires VP approval and is paid at the company's discretion.",
+      "category": "expenses",
+      "difficulty": "medium",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-015",
+      "question": "What is the international daily meal allowance?",
+      "ground_truth": "70 USD per day.",
+      "category": "expenses",
+      "difficulty": "easy",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-016",
+      "question": "Is alcohol reimbursable on an expense claim?",
+      "ground_truth": "No, alcohol is not reimbursable.",
+      "category": "expenses",
+      "difficulty": "easy",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-017",
+      "question": "How much home-office equipment reimbursement is available in the first year?",
+      "ground_truth": "Up to 800 USD.",
+      "category": "expenses",
+      "difficulty": "medium",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-018",
+      "question": "In which cycle are promotion decisions made?",
+      "ground_truth": "Only in the September review cycle.",
+      "category": "performance",
+      "difficulty": "medium",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-019",
+      "question": "How long must an employee serve before becoming eligible for promotion?",
+      "ground_truth": "6 months of service.",
+      "category": "performance",
+      "difficulty": "easy",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-020",
+      "question": "How does a performance improvement plan affect promotion eligibility?",
+      "ground_truth": "It runs for 8 weeks and pauses promotion eligibility for its duration.",
+      "category": "performance",
+      "difficulty": "hard",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-021",
+      "question": "What is the notice period for a manager?",
+      "ground_truth": "8 weeks.",
+      "category": "exit",
+      "difficulty": "easy",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-022",
+      "question": "Is unused sick leave paid out when leaving?",
+      "ground_truth": "No. Only accrued unused annual leave is paid out; unused sick leave is not.",
+      "category": "exit",
+      "difficulty": "hard",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-023",
+      "question": "How quickly must company equipment be returned after the last working day?",
+      "ground_truth": "Within 5 business days.",
+      "category": "exit",
+      "difficulty": "easy",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-024",
+      "question": "What is the company's policy on sabbatical leave?",
+      "ground_truth": "The handbook extract does not describe any sabbatical leave policy.",
+      "category": "adversarial",
+      "difficulty": "adversarial",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    },
+    {
+      "id": "hr-025",
+      "question": "How many days of annual leave do part-time employees accrue?",
+      "ground_truth": "The handbook extract only states the accrual for full-time employees, so this is not covered.",
+      "category": "adversarial",
+      "difficulty": "adversarial",
+      "expected_sources": [
+        "northwind-hr-handbook.md"
+      ]
+    }
+  ]
+}

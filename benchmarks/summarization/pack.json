@@ -1,0 +1,26 @@
+{
+  "key": "summarization",
+  "name": "Meeting & Incident Summarization",
+  "description": "Summarise short operational transcripts into the decisions and owners that matter. Correctness is judged against a reference summary, faithfulness against the transcript.",
+  "use_case": "summarization",
+  "metrics": [
+    "correctness",
+    "faithfulness",
+    "answer_relevance",
+    "latency",
+    "response_length"
+  ],
+  "rag_recommended": false,
+  "dataset": "dataset.json",
+  "documents": [],
+  "default_config": {
+    "temperature": 0.0,
+    "max_tokens": 300,
+    "system_prompt": "Summarise the transcript in two or three sentences. Include every decision and named owner. Do not add recommendations of your own."
+  },
+  "metric_notes": {
+    "correctness": "Compared against a reference summary; a judge model is recommended because wording varies legitimately.",
+    "faithfulness": "Summaries invent action items surprisingly often \u2014 this is the metric that catches it.",
+    "response_length": "Informational only; useful for spotting models that ignore the length instruction."
+  }
+}

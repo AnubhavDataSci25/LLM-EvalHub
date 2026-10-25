@@ -1,0 +1,5 @@
+# Optional heavy extras. The platform runs fully without them and reports
+# clearly when an optional evaluator/backend is unavailable.
+ragas==0.3.6
+faiss-cpu==1.12.0
+sentence-transformers==5.1.1

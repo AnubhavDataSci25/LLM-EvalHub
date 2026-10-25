@@ -1,0 +1,15 @@
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4"]
+ignore = [
+    "E501",  # line length is handled by the formatter, not enforced here
+    "B008",  # FastAPI's Depends()/File() defaults are the documented pattern
+]
+
+[lint.per-file-ignores]
+# Package facades deliberately re-export names for a stable public surface.
+"app/schemas/__init__.py" = ["F401"]
+"app/evaluation/metrics.py" = ["F401"]
+"tests/*" = ["B011"]

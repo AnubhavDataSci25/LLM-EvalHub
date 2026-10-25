@@ -1,0 +1,204 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------
+   Theme tokens — beige paper, olive ink.
+   Declared as raw RGB triples so Tailwind's `<alpha-value>` works.
+   ------------------------------------------------------------------ */
+@layer base {
+  :root {
+    --surface: 251 248 241;   /* sand-50  */
+    --elevated: 255 253 249;
+    --overlay: 245 240 228;   /* sand-100 */
+    --line: 222 211 187;      /* sand-300 */
+    --ink: 47 41 33;
+    --muted: 116 104 86;
+    --faint: 155 141 118;
+    --accent: 74 86 44;       /* olive-700 */
+    --accent-soft: 230 235 212;
+    --accent-ink: 255 255 255;
+
+    --ok: 96 111 54;
+    --warn: 176 122 42;
+    --bad: 164 62 44;
+    --info: 71 96 112;
+  }
+
+  .dark {
+    --surface: 24 22 19;
+    --elevated: 33 30 26;
+    --overlay: 42 38 32;
+    --line: 62 56 47;
+    --ink: 240 234 222;
+    --muted: 176 165 148;
+    --faint: 137 127 112;
+    --accent: 178 192 129;    /* olive-300 — legible on dark */
+    --accent-soft: 47 55 32;
+    --accent-ink: 23 28 15;
+
+    --ok: 162 180 108;
+    --warn: 214 163 84;
+    --bad: 219 122 100;
+    --info: 143 175 194;
+  }
+
+  * {
+    @apply border-line;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-surface text-ink antialiased;
+    font-family: 'Source Serif 4', 'Source Serif Pro', Georgia, Cambria, serif;
+    font-optical-sizing: auto;
+    font-variant-numeric: tabular-nums;
+    text-rendering: optimizeLegibility;
+    min-height: 100vh;
+  }
+
+  /* Subtle paper grain so large beige areas don't look flat. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+    background-image: radial-gradient(rgb(var(--line) / 0.35) 0.5px, transparent 0.5px);
+    background-size: 14px 14px;
+  }
+
+  .dark body::before {
+    opacity: 0.22;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-semibold tracking-[-0.015em] text-ink;
+  }
+
+  ::selection {
+    background: rgb(var(--accent) / 0.22);
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  /* Scrollbars that match the paper theme */
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--line));
+    border-radius: 999px;
+    border: 3px solid rgb(var(--surface));
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--faint)); }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-line bg-elevated shadow-card relative z-[1];
+  }
+
+  .card-hover {
+    @apply transition-all duration-300 ease-spring hover:shadow-lift hover:-translate-y-0.5;
+  }
+
+  .label {
+    @apply text-[0.72rem] font-semibold uppercase tracking-[0.13em] text-faint;
+  }
+
+  .metric-value {
+    @apply text-3xl font-semibold tracking-[-0.03em] text-ink;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink
+           placeholder:text-faint transition-all duration-200
+           focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/25;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
+           transition-all duration-200 ease-spring disabled:pointer-events-none disabled:opacity-50
+           active:scale-[0.98];
+  }
+
+  .btn-primary {
+    @apply btn bg-accent text-accent-ink shadow-card hover:brightness-110 hover:shadow-lift;
+  }
+
+  .btn-secondary {
+    @apply btn border border-line bg-elevated text-ink hover:border-accent/50 hover:bg-overlay;
+  }
+
+  .btn-ghost {
+    @apply btn text-muted hover:bg-overlay hover:text-ink;
+  }
+
+  .btn-danger {
+    @apply btn border border-transparent bg-[rgb(var(--bad))]/10 text-[rgb(var(--bad))]
+           hover:bg-[rgb(var(--bad))]/20;
+  }
+
+  .table-wrap {
+    @apply overflow-x-auto rounded-2xl border border-line bg-elevated shadow-card;
+  }
+
+  .table {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .table thead th {
+    @apply sticky top-0 z-10 whitespace-nowrap border-b border-line bg-overlay/80 px-4 py-3
+           text-left text-[0.72rem] font-semibold uppercase tracking-[0.11em] text-muted backdrop-blur;
+  }
+
+  .table tbody td {
+    @apply border-b border-line/60 px-4 py-3 align-top text-ink;
+  }
+
+  .table tbody tr {
+    @apply transition-colors duration-150 hover:bg-overlay/45;
+  }
+
+  .skeleton {
+    @apply relative overflow-hidden rounded-lg bg-overlay;
+  }
+
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background-image: linear-gradient(90deg, transparent, rgb(var(--line) / 0.55), transparent);
+  }
+
+  .prose-note {
+    @apply text-sm leading-relaxed text-muted;
+  }
+
+  .mono {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 0.82em;
+    letter-spacing: -0.01em;
+  }
+
+  .scroll-fade {
+    mask-image: linear-gradient(to bottom, transparent, black 12px, black calc(100% - 12px), transparent);
+  }
+}

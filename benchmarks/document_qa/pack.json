@@ -1,0 +1,25 @@
+{
+  "key": "document_qa",
+  "name": "HR Policy Document QA",
+  "description": "Questions over an internal HR policy handbook. Answers must be exact — a policy answer that is 'nearly right' is operationally wrong.",
+  "use_case": "document_qa",
+  "metrics": ["correctness", "faithfulness", "answer_relevance", "context_precision", "context_recall", "latency"],
+  "rag_recommended": true,
+  "dataset": "dataset.json",
+  "documents": ["docs/northwind-hr-handbook.md"],
+  "default_config": {
+    "temperature": 0.0,
+    "max_tokens": 350,
+    "top_k": 5,
+    "chunk_size": 600,
+    "chunk_overlap": 150,
+    "retriever": "hybrid",
+    "system_prompt": "You are an HR policy assistant. Answer strictly from the handbook extract provided. Never generalise from common practice at other companies."
+  },
+  "metric_notes": {
+    "correctness": "Policy answers are exact-value answers; day counts and eligibility rules must match.",
+    "faithfulness": "Models frequently substitute typical industry policy for the actual handbook.",
+    "context_recall": "Shows whether the relevant clause was retrieved at all.",
+    "context_precision": "Hybrid retrieval is the default here because policy questions mix keywords with paraphrase."
+  }
+}

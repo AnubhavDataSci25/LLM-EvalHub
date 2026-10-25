@@ -1,0 +1,202 @@
+{
+  "test_cases": [
+    {
+      "id": "se-001",
+      "question": "What is the invoice total?",
+      "ground_truth": "1,284.50 USD",
+      "context": "INVOICE #A-99210 | Date: 2026-02-14 | Vendor: Halcyon Supplies | Subtotal: 1,150.00 USD | Tax: 134.50 USD | Total: 1,284.50 USD | Terms: Net 30",
+      "category": "invoice",
+      "difficulty": "easy",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-002",
+      "question": "What are the payment terms?",
+      "ground_truth": "Net 30",
+      "context": "INVOICE #A-99210 | Date: 2026-02-14 | Vendor: Halcyon Supplies | Subtotal: 1,150.00 USD | Tax: 134.50 USD | Total: 1,284.50 USD | Terms: Net 30",
+      "category": "invoice",
+      "difficulty": "easy",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-003",
+      "question": "Which vendor issued the invoice?",
+      "ground_truth": "Halcyon Supplies",
+      "context": "INVOICE #A-99210 | Date: 2026-02-14 | Vendor: Halcyon Supplies | Subtotal: 1,150.00 USD | Tax: 134.50 USD | Total: 1,284.50 USD | Terms: Net 30",
+      "category": "invoice",
+      "difficulty": "easy",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-004",
+      "question": "What is the purchase order number?",
+      "ground_truth": "The record does not contain a purchase order number.",
+      "context": "INVOICE #A-99210 | Date: 2026-02-14 | Vendor: Halcyon Supplies | Total: 1,284.50 USD | Terms: Net 30",
+      "category": "invoice",
+      "difficulty": "adversarial",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-005",
+      "question": "What is the ticket priority?",
+      "ground_truth": "P2",
+      "context": "TICKET SUP-4471 | Opened: 2026-03-02 09:14 | Priority: P2 | Component: billing-api | Reporter: dana.k | Status: In Progress | SLA due: 2026-03-03 09:14",
+      "category": "ticket",
+      "difficulty": "easy",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-006",
+      "question": "Which component is affected?",
+      "ground_truth": "billing-api",
+      "context": "TICKET SUP-4471 | Opened: 2026-03-02 09:14 | Priority: P2 | Component: billing-api | Reporter: dana.k | Status: In Progress | SLA due: 2026-03-03 09:14",
+      "category": "ticket",
+      "difficulty": "easy",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-007",
+      "question": "When is the SLA due?",
+      "ground_truth": "2026-03-03 09:14",
+      "context": "TICKET SUP-4471 | Opened: 2026-03-02 09:14 | Priority: P2 | Component: billing-api | Reporter: dana.k | Status: In Progress | SLA due: 2026-03-03 09:14",
+      "category": "ticket",
+      "difficulty": "medium",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-008",
+      "question": "Who is the assignee?",
+      "ground_truth": "The record does not name an assignee.",
+      "context": "TICKET SUP-4471 | Opened: 2026-03-02 09:14 | Priority: P2 | Component: billing-api | Reporter: dana.k | Status: In Progress",
+      "category": "ticket",
+      "difficulty": "adversarial",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-009",
+      "question": "What is the tracking number?",
+      "ground_truth": "1Z9X84A20398471552",
+      "context": "SHIPMENT | Carrier: Meridian Freight | Tracking: 1Z9X84A20398471552 | Weight: 14.2 kg | Service: Express | ETA: 2026-04-11",
+      "category": "shipping",
+      "difficulty": "easy",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-010",
+      "question": "What is the shipment weight?",
+      "ground_truth": "14.2 kg",
+      "context": "SHIPMENT | Carrier: Meridian Freight | Tracking: 1Z9X84A20398471552 | Weight: 14.2 kg | Service: Express | ETA: 2026-04-11",
+      "category": "shipping",
+      "difficulty": "easy",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-011",
+      "question": "Which carrier is handling the shipment?",
+      "ground_truth": "Meridian Freight",
+      "context": "SHIPMENT | Carrier: Meridian Freight | Tracking: 1Z9X84A20398471552 | Weight: 14.2 kg | Service: Express | ETA: 2026-04-11",
+      "category": "shipping",
+      "difficulty": "easy",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-012",
+      "question": "What is the contract end date?",
+      "ground_truth": "2027-06-30",
+      "context": "CONTRACT MSA-2231 | Parties: Northwind Labs and Cobalt Analytics | Start: 2026-07-01 | End: 2027-06-30 | Auto-renew: Yes (12 months) | Notice to terminate: 60 days",
+      "category": "contract",
+      "difficulty": "easy",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-013",
+      "question": "How much notice is required to terminate?",
+      "ground_truth": "60 days",
+      "context": "CONTRACT MSA-2231 | Parties: Northwind Labs and Cobalt Analytics | Start: 2026-07-01 | End: 2027-06-30 | Auto-renew: Yes (12 months) | Notice to terminate: 60 days",
+      "category": "contract",
+      "difficulty": "medium",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-014",
+      "question": "Does the contract auto-renew, and for how long?",
+      "ground_truth": "Yes, for 12 months.",
+      "context": "CONTRACT MSA-2231 | Parties: Northwind Labs and Cobalt Analytics | Start: 2026-07-01 | End: 2027-06-30 | Auto-renew: Yes (12 months) | Notice to terminate: 60 days",
+      "category": "contract",
+      "difficulty": "medium",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-015",
+      "question": "What is the total contract value?",
+      "ground_truth": "The record does not state a contract value.",
+      "context": "CONTRACT MSA-2231 | Parties: Northwind Labs and Cobalt Analytics | Start: 2026-07-01 | End: 2027-06-30 | Auto-renew: Yes (12 months)",
+      "category": "contract",
+      "difficulty": "adversarial",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-016",
+      "question": "What is the applicant's years of experience?",
+      "ground_truth": "7 years",
+      "context": "APPLICATION | Role: Backend Engineer | Candidate ref: CND-8812 | Experience: 7 years | Location: Remote (CET) | Notice: 1 month",
+      "category": "hr",
+      "difficulty": "easy",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-017",
+      "question": "What notice period does the applicant have?",
+      "ground_truth": "1 month",
+      "context": "APPLICATION | Role: Backend Engineer | Candidate ref: CND-8812 | Experience: 7 years | Location: Remote (CET) | Notice: 1 month",
+      "category": "hr",
+      "difficulty": "easy",
+      "tags": [
+        "extraction"
+      ]
+    },
+    {
+      "id": "se-018",
+      "question": "What is the expected salary?",
+      "ground_truth": "The record does not state an expected salary.",
+      "context": "APPLICATION | Role: Backend Engineer | Candidate ref: CND-8812 | Experience: 7 years | Location: Remote (CET) | Notice: 1 month",
+      "category": "hr",
+      "difficulty": "adversarial",
+      "tags": [
+        "extraction"
+      ]
+    }
+  ]
+}

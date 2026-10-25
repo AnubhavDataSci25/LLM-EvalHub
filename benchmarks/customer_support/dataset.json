@@ -1,0 +1,280 @@
+{
+  "test_cases": [
+    {
+      "id": "cs-001",
+      "question": "What is the refund window for an unopened item?",
+      "ground_truth": "Unopened items can be returned for a full refund within 30 days of delivery.",
+      "context": "Returns: Unopened items can be returned for a full refund within 30 days of delivery. Opened items are eligible for store credit only, within 14 days.",
+      "category": "returns",
+      "difficulty": "easy",
+      "tags": [
+        "refund",
+        "returns"
+      ]
+    },
+    {
+      "id": "cs-002",
+      "question": "Can I get a cash refund on an item I already opened?",
+      "ground_truth": "No. Opened items are eligible for store credit only, and only within 14 days.",
+      "context": "Returns: Unopened items can be returned for a full refund within 30 days of delivery. Opened items are eligible for store credit only, within 14 days.",
+      "category": "returns",
+      "difficulty": "medium",
+      "tags": [
+        "refund",
+        "store-credit"
+      ]
+    },
+    {
+      "id": "cs-003",
+      "question": "How long does a refund take to appear on my card?",
+      "ground_truth": "Refunds are issued within 3 business days of the return arriving at the warehouse, and banks typically post them 5 to 10 business days after that.",
+      "context": "Refund processing: Refunds are issued within 3 business days of the return arriving at our warehouse. Your bank typically posts the credit 5-10 business days later.",
+      "category": "returns",
+      "difficulty": "easy",
+      "tags": [
+        "refund",
+        "timing"
+      ]
+    },
+    {
+      "id": "cs-004",
+      "question": "Do you charge for return shipping?",
+      "ground_truth": "Return shipping is free for defective or incorrect items; otherwise a flat 5.99 USD is deducted from the refund.",
+      "context": "Return shipping: Free for defective or incorrect items. For all other returns a flat fee of $5.99 is deducted from the refund.",
+      "category": "returns",
+      "difficulty": "medium",
+      "tags": [
+        "shipping",
+        "fees"
+      ]
+    },
+    {
+      "id": "cs-005",
+      "question": "What happens if my package never arrives?",
+      "ground_truth": "File a missing-package claim within 21 days of the shipping date and support will either reship the order or refund it in full.",
+      "context": "Lost packages: File a missing-package claim within 21 days of the ship date. We will reship the order or refund it in full, at your choice.",
+      "category": "shipping",
+      "difficulty": "medium",
+      "tags": [
+        "claims",
+        "lost"
+      ]
+    },
+    {
+      "id": "cs-006",
+      "question": "Can I change the delivery address after ordering?",
+      "ground_truth": "Only while the order is still in Processing status; once it ships the address cannot be changed.",
+      "context": "Address changes: Possible only while the order shows Processing. Once an order ships the address is locked and cannot be changed.",
+      "category": "shipping",
+      "difficulty": "easy",
+      "tags": [
+        "address"
+      ]
+    },
+    {
+      "id": "cs-007",
+      "question": "Is next-day delivery available to rural postcodes?",
+      "ground_truth": "Next-day delivery covers metro postcodes only; rural addresses receive standard delivery in 3 to 5 business days.",
+      "context": "Delivery speeds: Next-day delivery is available to metro postcodes only. Rural addresses receive standard delivery in 3-5 business days.",
+      "category": "shipping",
+      "difficulty": "medium",
+      "tags": [
+        "delivery"
+      ]
+    },
+    {
+      "id": "cs-008",
+      "question": "Do you ship internationally?",
+      "ground_truth": "International shipping is available to 23 countries, with duties and taxes paid by the recipient at delivery.",
+      "context": "International: We ship to 23 countries. Duties and taxes are the recipient's responsibility and are collected at delivery.",
+      "category": "shipping",
+      "difficulty": "easy",
+      "tags": [
+        "international"
+      ]
+    },
+    {
+      "id": "cs-009",
+      "question": "How do I cancel my subscription?",
+      "ground_truth": "Cancel from Account, then Subscriptions, then Cancel plan; access continues until the end of the paid period.",
+      "context": "Subscriptions: Cancel any time under Account > Subscriptions > Cancel plan. Access continues until the end of the current paid period. No partial-month refunds are issued.",
+      "category": "billing",
+      "difficulty": "easy",
+      "tags": [
+        "subscription",
+        "cancel"
+      ]
+    },
+    {
+      "id": "cs-010",
+      "question": "If I cancel mid-month, do I get a partial refund?",
+      "ground_truth": "No. Partial-month refunds are not issued; access simply continues to the end of the paid period.",
+      "context": "Subscriptions: Cancel any time under Account > Subscriptions > Cancel plan. Access continues until the end of the current paid period. No partial-month refunds are issued.",
+      "category": "billing",
+      "difficulty": "medium",
+      "tags": [
+        "subscription",
+        "refund"
+      ]
+    },
+    {
+      "id": "cs-011",
+      "question": "Why was I charged twice this month?",
+      "ground_truth": "A second charge in the same month usually means the plan was upgraded mid-cycle, which bills the prorated difference immediately.",
+      "context": "Billing: Upgrading a plan mid-cycle bills the prorated difference immediately, which appears as a second charge in the same month.",
+      "category": "billing",
+      "difficulty": "hard",
+      "tags": [
+        "billing",
+        "duplicate"
+      ]
+    },
+    {
+      "id": "cs-012",
+      "question": "What payment methods do you accept?",
+      "ground_truth": "Visa, Mastercard, American Express, PayPal and Apple Pay. Bank transfer is available for business accounts only.",
+      "context": "Payments: We accept Visa, Mastercard, American Express, PayPal and Apple Pay. Bank transfer is available on business accounts only.",
+      "category": "billing",
+      "difficulty": "easy",
+      "tags": [
+        "payments"
+      ]
+    },
+    {
+      "id": "cs-013",
+      "question": "Can I use two discount codes on one order?",
+      "ground_truth": "No. Only one discount code can be applied per order.",
+      "context": "Promotions: Only one discount code may be applied per order. Codes cannot be combined or applied retroactively.",
+      "category": "billing",
+      "difficulty": "easy",
+      "tags": [
+        "discounts"
+      ]
+    },
+    {
+      "id": "cs-014",
+      "question": "I forgot to apply my code \u2014 can it be added after checkout?",
+      "ground_truth": "No. Discount codes cannot be applied retroactively to a completed order.",
+      "context": "Promotions: Only one discount code may be applied per order. Codes cannot be combined or applied retroactively.",
+      "category": "billing",
+      "difficulty": "medium",
+      "tags": [
+        "discounts"
+      ]
+    },
+    {
+      "id": "cs-015",
+      "question": "How long is the warranty on electronics?",
+      "ground_truth": "Electronics carry a 24-month manufacturer warranty covering defects, but not accidental or liquid damage.",
+      "context": "Warranty: Electronics carry a 24-month manufacturer warranty against defects. Accidental damage and liquid damage are not covered.",
+      "category": "warranty",
+      "difficulty": "easy",
+      "tags": [
+        "warranty"
+      ]
+    },
+    {
+      "id": "cs-016",
+      "question": "My laptop got wet \u2014 is that covered by warranty?",
+      "ground_truth": "No. Liquid damage is explicitly excluded from the manufacturer warranty.",
+      "context": "Warranty: Electronics carry a 24-month manufacturer warranty against defects. Accidental damage and liquid damage are not covered.",
+      "category": "warranty",
+      "difficulty": "medium",
+      "tags": [
+        "warranty",
+        "exclusions"
+      ]
+    },
+    {
+      "id": "cs-017",
+      "question": "How do I start a warranty claim?",
+      "ground_truth": "Submit the order number and photos of the fault through the Warranty Claim form; assessment takes up to 5 business days.",
+      "context": "Warranty claims: Submit your order number and photos of the fault via the Warranty Claim form. Assessment takes up to 5 business days.",
+      "category": "warranty",
+      "difficulty": "easy",
+      "tags": [
+        "warranty",
+        "process"
+      ]
+    },
+    {
+      "id": "cs-018",
+      "question": "Can someone else return an item on my behalf?",
+      "ground_truth": "Yes, if they have the order number and the original confirmation email; the refund still goes to the original payment method.",
+      "context": "Returns authorisation: A third party may return an item with the order number and original confirmation email. Refunds always go to the original payment method.",
+      "category": "returns",
+      "difficulty": "hard",
+      "tags": [
+        "returns",
+        "authorisation"
+      ]
+    },
+    {
+      "id": "cs-019",
+      "question": "Do you price match competitors?",
+      "ground_truth": "Price matching applies to identical in-stock items from listed authorised retailers, claimed within 7 days of purchase.",
+      "context": "Price match: We match identical, in-stock items from listed authorised retailers. Claims must be made within 7 days of purchase.",
+      "category": "billing",
+      "difficulty": "medium",
+      "tags": [
+        "price-match"
+      ]
+    },
+    {
+      "id": "cs-020",
+      "question": "What is the refund policy for gift cards?",
+      "ground_truth": "Gift cards are non-refundable and cannot be exchanged for cash.",
+      "context": "Gift cards: Non-refundable and cannot be exchanged for cash. Unused balances do not expire.",
+      "category": "returns",
+      "difficulty": "medium",
+      "tags": [
+        "gift-card"
+      ]
+    },
+    {
+      "id": "cs-021",
+      "question": "Do gift card balances expire?",
+      "ground_truth": "No. Unused gift card balances do not expire.",
+      "context": "Gift cards: Non-refundable and cannot be exchanged for cash. Unused balances do not expire.",
+      "category": "returns",
+      "difficulty": "easy",
+      "tags": [
+        "gift-card"
+      ]
+    },
+    {
+      "id": "cs-022",
+      "question": "Can I return an item bought 60 days ago because it was a gift?",
+      "ground_truth": "No. The policy does not extend the 30-day window for gifts, so a 60-day-old purchase is outside the return window.",
+      "context": "Returns: Unopened items can be returned for a full refund within 30 days of delivery. No exceptions are made for gift purchases.",
+      "category": "returns",
+      "difficulty": "adversarial",
+      "tags": [
+        "returns",
+        "edge-case"
+      ]
+    },
+    {
+      "id": "cs-023",
+      "question": "What is your policy on returning perishable food items?",
+      "ground_truth": "Perishable food items cannot be returned for hygiene reasons.",
+      "context": "Returns exclusions: Perishable food, opened cosmetics and personalised items cannot be returned for hygiene and customisation reasons.",
+      "category": "returns",
+      "difficulty": "medium",
+      "tags": [
+        "exclusions"
+      ]
+    },
+    {
+      "id": "cs-024",
+      "question": "Will you refund an item I bought from a third-party marketplace seller?",
+      "ground_truth": "No. Marketplace seller orders are covered by the seller's own policy, not the store policy.",
+      "context": "Marketplace: Orders fulfilled by third-party sellers are governed by that seller's return policy, not ours. Contact the seller directly.",
+      "category": "returns",
+      "difficulty": "adversarial",
+      "tags": [
+        "marketplace"
+      ]
+    }
+  ]
+}

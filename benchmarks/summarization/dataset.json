@@ -1,0 +1,136 @@
+{
+  "test_cases": [
+    {
+      "id": "sum-001",
+      "question": "Summarise the decisions and owners in this stand-up.",
+      "ground_truth": "The team decided to delay the billing migration to the 14th, with Priya owning the rollback plan and Marco updating the status page copy.",
+      "context": "Stand-up 03-09. Priya: billing migration is blocked on the reconciliation job, we should not ship Friday. Marco: agreed, customers will need notice. Lead: let's move it to the 14th. Priya will own the rollback plan, Marco updates the status page copy before then.",
+      "category": "standup",
+      "difficulty": "easy",
+      "tags": [
+        "summarization"
+      ]
+    },
+    {
+      "id": "sum-002",
+      "question": "Summarise this incident review.",
+      "ground_truth": "A bad cache key caused 40 minutes of stale pricing; the fix was shipped the same day and Dana will add a cache-key test to CI.",
+      "context": "Incident IR-88 review. Root cause: a cache key omitted the currency, so EU customers saw USD prices for 40 minutes. Detection came from a customer report, not alerting. Fix shipped the same day. Dana will add a cache-key test to CI. Alerting gap tracked separately.",
+      "category": "incident",
+      "difficulty": "medium",
+      "tags": [
+        "summarization"
+      ]
+    },
+    {
+      "id": "sum-003",
+      "question": "Summarise the outcome of this planning discussion.",
+      "ground_truth": "Search relevance work was prioritised over the mobile redesign for the quarter, and Aisha will write the scoping document by Friday.",
+      "context": "Planning call. Options were the mobile redesign and search relevance. Revenue impact favours search relevance; mobile can slip a quarter. Decision: search relevance is the priority for the quarter. Aisha writes the scoping doc by Friday.",
+      "category": "planning",
+      "difficulty": "easy",
+      "tags": [
+        "summarization"
+      ]
+    },
+    {
+      "id": "sum-004",
+      "question": "Summarise the customer call.",
+      "ground_truth": "The customer needs SSO before renewal and will accept a Q3 delivery date; Tom is sending a written commitment.",
+      "context": "Customer call, Vertex Ltd. Their security team blocks renewal without SSO. They can accept delivery in Q3 if it is committed in writing. Tom will send the written commitment this week. Pricing was not discussed.",
+      "category": "customer",
+      "difficulty": "medium",
+      "tags": [
+        "summarization"
+      ]
+    },
+    {
+      "id": "sum-005",
+      "question": "Summarise what was decided about the on-call rotation.",
+      "ground_truth": "On-call moves to a weekly rotation from the 1st, with a second responder for severity-1 incidents only; Ben updates the schedule.",
+      "context": "On-call discussion. Current fortnightly rotation causes fatigue. Decision: weekly rotation starting the 1st. A second responder is paged only for severity-1. Ben updates the schedule in the paging tool.",
+      "category": "operations",
+      "difficulty": "easy",
+      "tags": [
+        "summarization"
+      ]
+    },
+    {
+      "id": "sum-006",
+      "question": "Summarise this retrospective.",
+      "ground_truth": "The team agreed that unclear acceptance criteria caused rework and will require criteria before a ticket enters the sprint; Lena will update the template.",
+      "context": "Retro. What went badly: three tickets were reworked because acceptance criteria were written after development started. Agreement: no ticket enters a sprint without acceptance criteria. Lena updates the ticket template. Nothing else was actioned.",
+      "category": "retro",
+      "difficulty": "medium",
+      "tags": [
+        "summarization"
+      ]
+    },
+    {
+      "id": "sum-007",
+      "question": "Summarise the vendor evaluation outcome.",
+      "ground_truth": "Neither vendor was selected; the team will run a two-week trial of both before deciding, coordinated by Sam.",
+      "context": "Vendor evaluation. Vendor A is cheaper but has no EU region. Vendor B meets residency needs at higher cost. No decision reached today. Sam will run a two-week trial of both and bring numbers back.",
+      "category": "vendor",
+      "difficulty": "hard",
+      "tags": [
+        "summarization"
+      ]
+    },
+    {
+      "id": "sum-008",
+      "question": "Summarise the migration status update.",
+      "ground_truth": "Migration is 60% complete and on track for the 20th; the remaining risk is the legacy report exporter, which Chen is investigating.",
+      "context": "Migration update. 60% of tables migrated, on track for the 20th. Remaining risk is the legacy report exporter, which depends on a deprecated view. Chen is investigating whether it can be rewritten or retired.",
+      "category": "migration",
+      "difficulty": "medium",
+      "tags": [
+        "summarization"
+      ]
+    },
+    {
+      "id": "sum-009",
+      "question": "Summarise the security review.",
+      "ground_truth": "The review passed with one medium finding about long-lived API keys; rotation enforcement is due before the next audit, owned by the platform team.",
+      "context": "Security review. No critical or high findings. One medium finding: API keys are long-lived with no rotation enforcement. The platform team owns adding enforced rotation before the next audit.",
+      "category": "security",
+      "difficulty": "medium",
+      "tags": [
+        "summarization"
+      ]
+    },
+    {
+      "id": "sum-010",
+      "question": "Summarise the budget conversation.",
+      "ground_truth": "Headcount was approved for one engineer but not two, and the tooling budget was held flat; Rita will re-submit the second role next quarter.",
+      "context": "Budget call. Request was two engineers and a 20% tooling increase. Approved: one engineer. Tooling held flat. Rita will re-submit the second role next quarter with utilisation data.",
+      "category": "budget",
+      "difficulty": "hard",
+      "tags": [
+        "summarization"
+      ]
+    },
+    {
+      "id": "sum-011",
+      "question": "Summarise this transcript.",
+      "ground_truth": "The meeting ended without a decision; the group will reconvene once the latency data is available.",
+      "context": "Discussion on caching strategy. Arguments were made for both edge caching and origin caching. The group could not agree without latency data, which is not yet collected. Reconvene next week.",
+      "category": "planning",
+      "difficulty": "adversarial",
+      "tags": [
+        "summarization"
+      ]
+    },
+    {
+      "id": "sum-012",
+      "question": "Summarise the customer escalation.",
+      "ground_truth": "The customer's data export failed three times and they want a root-cause note by Thursday; Nadia is the single point of contact until it closes.",
+      "context": "Escalation, Grove Health. Their scheduled data export failed three times this month. They are asking for a written root-cause note by Thursday. Nadia is now single point of contact until the escalation closes. No credits were requested.",
+      "category": "customer",
+      "difficulty": "medium",
+      "tags": [
+        "summarization"
+      ]
+    }
+  ]
+}

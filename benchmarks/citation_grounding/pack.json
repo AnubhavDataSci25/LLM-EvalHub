@@ -1,0 +1,26 @@
+{
+  "key": "citation_grounding",
+  "name": "Citation & Grounding Accuracy",
+  "description": "Adversarial grounding set. Every case supplies context; roughly half of the questions cannot be answered from it. A good model says so instead of filling the gap.",
+  "use_case": "citation_grounding",
+  "metrics": [
+    "faithfulness",
+    "correctness",
+    "answer_relevance",
+    "latency"
+  ],
+  "rag_recommended": false,
+  "dataset": "dataset.json",
+  "documents": [],
+  "default_config": {
+    "temperature": 0.0,
+    "max_tokens": 300,
+    "top_k": 4,
+    "system_prompt": "Answer only from the context. If the context does not contain the answer, reply exactly: 'The provided context does not contain this information.' Never use outside knowledge."
+  },
+  "metric_notes": {
+    "faithfulness": "The headline metric: unanswerable cases are where hallucination shows up.",
+    "correctness": "For unanswerable cases the correct answer is an explicit refusal.",
+    "answer_relevance": "Detects hedging that never commits to an answer or a refusal."
+  }
+}

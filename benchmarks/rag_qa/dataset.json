@@ -1,0 +1,324 @@
+{
+  "test_cases": [
+    {
+      "id": "rq-001",
+      "question": "How many projects does the Starter plan include?",
+      "ground_truth": "Starter includes 3 projects.",
+      "category": "plans",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-002",
+      "question": "What is the monthly API call allowance on the Team plan?",
+      "ground_truth": "Team includes 2,000,000 API calls per month.",
+      "category": "plans",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-003",
+      "question": "How much does API overage cost on the Starter plan?",
+      "ground_truth": "0.40 USD per 1,000 calls above the monthly allowance.",
+      "category": "plans",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-004",
+      "question": "Is overage ever billed without warning?",
+      "ground_truth": "No. A usage alert is always sent before overage is charged.",
+      "category": "plans",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-005",
+      "question": "Which two authentication methods does Orbit support?",
+      "ground_truth": "Project API keys and OAuth 2.0 device flow.",
+      "category": "auth",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-006",
+      "question": "How long do OAuth access tokens last?",
+      "ground_truth": "OAuth access tokens expire after 60 minutes.",
+      "category": "auth",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-007",
+      "question": "When do refresh tokens expire?",
+      "ground_truth": "Refresh tokens expire after 30 days of inactivity.",
+      "category": "auth",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-008",
+      "question": "Do project API keys expire on their own?",
+      "ground_truth": "No. Project API keys never expire automatically and must be rotated manually.",
+      "category": "auth",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-009",
+      "question": "What prefix identifies a production API key?",
+      "ground_truth": "Production keys use the orb_live_ prefix.",
+      "category": "auth",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-010",
+      "question": "Can a test key read production data?",
+      "ground_truth": "No. Test keys cannot read production data.",
+      "category": "auth",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-011",
+      "question": "What is the default rate limit on the Team plan?",
+      "ground_truth": "600 requests per minute per project.",
+      "category": "limits",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-012",
+      "question": "How long can a burst exceed the rate limit?",
+      "ground_truth": "Bursts of up to twice the limit are permitted for 10 seconds.",
+      "category": "limits",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-013",
+      "question": "What does the API return when the rate limit is exceeded?",
+      "ground_truth": "HTTP 429 with a Retry-After header expressed in seconds.",
+      "category": "limits",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-014",
+      "question": "Will creating more API keys increase my throughput?",
+      "ground_truth": "No. Rate limits are enforced per project, not per API key.",
+      "category": "limits",
+      "difficulty": "hard",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-015",
+      "question": "How long are event logs retained on Starter?",
+      "ground_truth": "Event logs are retained for 30 days on Starter.",
+      "category": "retention",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-016",
+      "question": "Can a deleted project be restored?",
+      "ground_truth": "Yes, within a 14-day soft-delete window, by an account owner.",
+      "category": "retention",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-017",
+      "question": "How often are backups taken?",
+      "ground_truth": "Backups are taken every 6 hours and stored in a separate region.",
+      "category": "retention",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-018",
+      "question": "Which plans support point-in-time restore?",
+      "ground_truth": "Team and Enterprise only, with 5-minute granularity.",
+      "category": "retention",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-019",
+      "question": "Can a project change region after it is created?",
+      "ground_truth": "No. The region is fixed at creation; migrating requires export and re-import into a new project.",
+      "category": "regions",
+      "difficulty": "hard",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-020",
+      "question": "Which regions does Orbit run in?",
+      "ground_truth": "us-east, eu-west, ap-south and ap-southeast.",
+      "category": "regions",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-021",
+      "question": "Where are backups of EU projects stored?",
+      "ground_truth": "Inside eu-west, because EU projects keep all customer data including backups in region.",
+      "category": "regions",
+      "difficulty": "hard",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-022",
+      "question": "How many times does a failed webhook delivery retry?",
+      "ground_truth": "5 times, with exponential backoff over roughly one hour.",
+      "category": "webhooks",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-023",
+      "question": "What counts as a failed webhook delivery?",
+      "ground_truth": "The endpoint not returning a 2xx status within 10 seconds.",
+      "category": "webhooks",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-024",
+      "question": "What happens after five webhook failures?",
+      "ground_truth": "The webhook is marked suspended and must be re-enabled manually.",
+      "category": "webhooks",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-025",
+      "question": "How are webhook payloads signed?",
+      "ground_truth": "With HMAC-SHA256 using the webhook secret, in the Orbit-Signature header.",
+      "category": "webhooks",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-026",
+      "question": "What is the first-response target for Team support?",
+      "ground_truth": "1 business day.",
+      "category": "support",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-027",
+      "question": "What uptime does the Enterprise SLA guarantee?",
+      "ground_truth": "99.9% uptime.",
+      "category": "support",
+      "difficulty": "easy",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-028",
+      "question": "How large can SLA credits be and when must they be claimed?",
+      "ground_truth": "Credits are capped at 30% of the monthly invoice and must be claimed within 30 days of the incident.",
+      "category": "support",
+      "difficulty": "hard",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-029",
+      "question": "Does the Starter plan include email support?",
+      "ground_truth": "No. Starter includes community support only.",
+      "category": "support",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-030",
+      "question": "What is Orbit's discount for annual prepayment?",
+      "ground_truth": "The handbook does not state any annual prepayment discount.",
+      "category": "adversarial",
+      "difficulty": "adversarial",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-031",
+      "question": "How many regions support point-in-time restore on the Starter plan?",
+      "ground_truth": "None \u2014 point-in-time restore is not available on Starter.",
+      "category": "adversarial",
+      "difficulty": "adversarial",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    },
+    {
+      "id": "rq-032",
+      "question": "What is the SLA response target for severity-1 incidents?",
+      "ground_truth": "4 hours, on Enterprise.",
+      "category": "support",
+      "difficulty": "medium",
+      "expected_sources": [
+        "orbit-platform-handbook.md"
+      ]
+    }
+  ]
+}

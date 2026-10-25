@@ -1,0 +1,224 @@
+{
+  "test_cases": [
+    {
+      "id": "cg-001",
+      "question": "What is the maximum file upload size?",
+      "ground_truth": "The maximum upload size is 25 MB.",
+      "context": "Uploads: Files up to 25 MB are accepted. Larger files must use the resumable upload endpoint.",
+      "category": "answerable",
+      "difficulty": "easy",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-002",
+      "question": "What compression formats are supported for uploads?",
+      "ground_truth": "The provided context does not contain this information.",
+      "context": "Uploads: Files up to 25 MB are accepted. Larger files must use the resumable upload endpoint.",
+      "category": "unanswerable",
+      "difficulty": "adversarial",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-003",
+      "question": "How long does the trial last?",
+      "ground_truth": "The trial lasts 14 days.",
+      "context": "Trials: A 14-day trial is available on all plans, with no credit card required.",
+      "category": "answerable",
+      "difficulty": "easy",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-004",
+      "question": "Does the trial auto-convert to a paid plan?",
+      "ground_truth": "The provided context does not contain this information.",
+      "context": "Trials: A 14-day trial is available on all plans, with no credit card required.",
+      "category": "unanswerable",
+      "difficulty": "adversarial",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-005",
+      "question": "Which encryption is used at rest?",
+      "ground_truth": "Data at rest is encrypted with AES-256.",
+      "context": "Security: Data at rest is encrypted with AES-256 and in transit with TLS 1.3.",
+      "category": "answerable",
+      "difficulty": "easy",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-006",
+      "question": "Who holds the encryption keys?",
+      "ground_truth": "The provided context does not contain this information.",
+      "context": "Security: Data at rest is encrypted with AES-256 and in transit with TLS 1.3.",
+      "category": "unanswerable",
+      "difficulty": "adversarial",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-007",
+      "question": "How many seats are included in the base licence?",
+      "ground_truth": "The base licence includes 5 seats.",
+      "context": "Licensing: The base licence includes 5 seats. Additional seats are sold in blocks of 5.",
+      "category": "answerable",
+      "difficulty": "easy",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-008",
+      "question": "What does an additional seat cost?",
+      "ground_truth": "The provided context does not contain this information.",
+      "context": "Licensing: The base licence includes 5 seats. Additional seats are sold in blocks of 5.",
+      "category": "unanswerable",
+      "difficulty": "adversarial",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-009",
+      "question": "How are additional seats sold?",
+      "ground_truth": "Additional seats are sold in blocks of 5.",
+      "context": "Licensing: The base licence includes 5 seats. Additional seats are sold in blocks of 5.",
+      "category": "answerable",
+      "difficulty": "medium",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-010",
+      "question": "What is the audit log retention period?",
+      "ground_truth": "Audit logs are retained for 90 days.",
+      "context": "Compliance: Audit logs are retained for 90 days and can be exported as JSON.",
+      "category": "answerable",
+      "difficulty": "easy",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-011",
+      "question": "Can audit logs be streamed to a SIEM?",
+      "ground_truth": "The provided context does not contain this information.",
+      "context": "Compliance: Audit logs are retained for 90 days and can be exported as JSON.",
+      "category": "unanswerable",
+      "difficulty": "adversarial",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-012",
+      "question": "In what format can audit logs be exported?",
+      "ground_truth": "Audit logs can be exported as JSON.",
+      "context": "Compliance: Audit logs are retained for 90 days and can be exported as JSON.",
+      "category": "answerable",
+      "difficulty": "easy",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-013",
+      "question": "What is the deployment frequency?",
+      "ground_truth": "Deployments happen weekly, on Tuesdays.",
+      "context": "Release process: Deployments happen weekly on Tuesdays, with an emergency path for security fixes.",
+      "category": "answerable",
+      "difficulty": "medium",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-014",
+      "question": "How long does an emergency security deployment take?",
+      "ground_truth": "The provided context does not contain this information.",
+      "context": "Release process: Deployments happen weekly on Tuesdays, with an emergency path for security fixes.",
+      "category": "unanswerable",
+      "difficulty": "adversarial",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-015",
+      "question": "Which browsers are supported?",
+      "ground_truth": "The two most recent versions of Chrome, Firefox, Safari and Edge are supported.",
+      "context": "Compatibility: We support the two most recent versions of Chrome, Firefox, Safari and Edge.",
+      "category": "answerable",
+      "difficulty": "easy",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-016",
+      "question": "Is Internet Explorer 11 supported?",
+      "ground_truth": "No \u2014 only the two most recent versions of Chrome, Firefox, Safari and Edge are supported, which excludes Internet Explorer 11.",
+      "context": "Compatibility: We support the two most recent versions of Chrome, Firefox, Safari and Edge.",
+      "category": "answerable",
+      "difficulty": "hard",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-017",
+      "question": "What is the mobile app's minimum OS version?",
+      "ground_truth": "The provided context does not contain this information.",
+      "context": "Compatibility: We support the two most recent versions of Chrome, Firefox, Safari and Edge.",
+      "category": "unanswerable",
+      "difficulty": "adversarial",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-018",
+      "question": "How many API versions are supported at once?",
+      "ground_truth": "Two API versions are supported concurrently.",
+      "context": "Versioning: Two API versions are supported concurrently. Deprecated versions receive 6 months of notice.",
+      "category": "answerable",
+      "difficulty": "medium",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-019",
+      "question": "How much notice is given before an API version is removed?",
+      "ground_truth": "6 months of notice.",
+      "context": "Versioning: Two API versions are supported concurrently. Deprecated versions receive 6 months of notice.",
+      "category": "answerable",
+      "difficulty": "easy",
+      "tags": [
+        "grounding"
+      ]
+    },
+    {
+      "id": "cg-020",
+      "question": "Does the deprecation notice period apply to beta endpoints?",
+      "ground_truth": "The provided context does not contain this information.",
+      "context": "Versioning: Two API versions are supported concurrently. Deprecated versions receive 6 months of notice.",
+      "category": "unanswerable",
+      "difficulty": "adversarial",
+      "tags": [
+        "grounding"
+      ]
+    }
+  ]
+}

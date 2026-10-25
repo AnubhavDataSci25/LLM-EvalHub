@@ -1,0 +1,27 @@
+{
+  "key": "rag_qa",
+  "name": "RAG QA Starter",
+  "description": "Question answering over a product knowledge base. Ships a source document so retrieval quality (precision, recall) can be measured separately from answer quality.",
+  "use_case": "rag_qa",
+  "metrics": ["correctness", "answer_relevance", "faithfulness", "context_precision", "context_recall", "latency"],
+  "rag_recommended": true,
+  "dataset": "dataset.json",
+  "documents": ["docs/orbit-platform-handbook.md"],
+  "default_config": {
+    "temperature": 0.0,
+    "max_tokens": 400,
+    "top_k": 4,
+    "chunk_size": 700,
+    "chunk_overlap": 120,
+    "retriever": "vector",
+    "system_prompt": "Answer the question using only the retrieved context. Quote figures exactly as written. If the context is insufficient, reply: 'The provided context does not contain this information.'"
+  },
+  "metric_notes": {
+    "context_recall": "The single most diagnostic RAG metric — if recall is low the model never had a chance.",
+    "context_precision": "Low precision with high recall usually means top_k is too large or chunks are too small.",
+    "faithfulness": "Separates 'the model hallucinated' from 'retrieval failed'.",
+    "correctness": "End-to-end answer quality once retrieval has done its job.",
+    "answer_relevance": "Detects answers that summarise the context instead of answering.",
+    "latency": "Retrieval adds latency; this keeps the trade-off visible."
+  }
+}

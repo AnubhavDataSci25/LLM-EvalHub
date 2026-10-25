@@ -1,0 +1,22 @@
+{
+  "key": "customer_support",
+  "name": "Customer Support QA",
+  "description": "Policy-grounded support answers for an e-commerce help desk. Tests whether a model answers from the stated policy instead of inventing plausible-sounding terms.",
+  "use_case": "customer_support",
+  "metrics": ["correctness", "answer_relevance", "faithfulness", "latency"],
+  "rag_recommended": false,
+  "dataset": "dataset.json",
+  "documents": [],
+  "default_config": {
+    "temperature": 0.0,
+    "max_tokens": 320,
+    "top_k": 4,
+    "system_prompt": "You are a customer support assistant. Answer only from the policy context provided. If the context does not cover the question, say so explicitly instead of guessing."
+  },
+  "metric_notes": {
+    "correctness": "Support answers must match the published policy exactly — a paraphrase that changes a number is wrong.",
+    "faithfulness": "The most common support failure is a confident answer with invented policy terms.",
+    "answer_relevance": "Catches replies that restate the policy without answering the question asked.",
+    "latency": "Support UIs surface answers live, so response time is part of quality."
+  }
+}
