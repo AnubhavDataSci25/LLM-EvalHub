@@ -167,4 +167,28 @@ A test sets a sentinel credential and asserts it appears nowhere in any API resp
 - **Cost and Latency.** Running counterfactual conditions incurs additional provider API calls and latency. Dry-run call estimation, batch capping, and caching are necessary safeguards.
 - **Gold Context Dependency.** Retrieval attribution fundamentally relies on high-quality reference context (`expected_sources` or `context`). When the reference dataset lacks gold passages, the system falls back to `NOT_ATTRIBUTABLE` and the rule-based heuristic cascade.
 
+---
+
+## ADR-014 — Live-probed availability over a static model catalog
+
+**Decision.** Model availability is determined exclusively through live discovery and cheap verification probes, replacing the static model catalog as the source of truth. Models are presented to users only when confirmed usable right now (`AVAILABLE`) under their specific configuration and API credentials. Models that are retired, rate-limited, plan-gated, or failing upstream are classified with transparent machine-readable evidence, stored in an availability cache with a configurable TTL (default 6 hours), and validated at evaluation submission time.
+
+**Why.**
+1. **Model Churn and Entitlement Gating.** Cloud and open-weight model endpoints evolve continuously: models are retired (e.g. 404 on deprecated checkpoints like `llama-3.3-70b-versatile` or `gemini-2.5-flash`), gated behind billing or enterprise tiers (e.g. 402/403 on free quotas or unentitled model weights), or rate-limited to zero. Presenting static catalog lists causes silent runtime failures midway through evaluation runs.
+2. **Honest Invariant: Nothing Available Without Successful Probe.** An entry in the UI model picker or judge selector represents a proven capability, not a guess. Static catalogs serve solely as unverified hints when a provider's live listing is unreachable or before keys are configured.
+3. **Cheap Verification Probes with Bounded Concurrency.** For each discovered candidate, a minimal generation probe (`max_tokens=8`, `temperature=0`, fixed trivial prompt) is executed through the normal provider client path with bounded concurrency (`max_probe_concurrency=3`, default cap of 15 probes per provider).
+4. **Structured Status Taxonomy with Circuit Breaking:**
+   - `AVAILABLE`: probe returned a non-empty string with recorded latency.
+   - `RATE_LIMITED`: 429 or quota limit with recorded `retry_after`. Treated as temporarily limited, not dead.
+   - `NOT_ENTITLED`: 402/403 or plan/tier gating.
+   - `NOT_FOUND`: 404 or decommissioned checkpoint.
+   - `INVALID_CREDENTIALS`: 401. Immediately halts remaining probes for that provider.
+   - `TIMEOUT`, `UPSTREAM_ERROR`, `EMPTY_RESPONSE`, `NOT_PROBED`.
+5. **Runtime Protection and Auto-Invalidation:** Selection screens read from the `model_availability` cache without triggering probes on page load. If an evaluation run encounters a runtime `NOT_FOUND` or `NOT_ENTITLED`, the model is automatically invalidated in cache, and subsequent evaluation creations referencing that model are rejected with HTTP 422.
+6. **Default Evaluator Verification:** Defaults configured in `DEFAULT_EVALUATOR_PROVIDER` and `DEFAULT_EVALUATOR_MODEL` are validated at application startup and via `/ready`, issuing clear warnings and concrete available alternative suggestions if unavailable.
+
+**Trade-offs.**
+- **Initial Audit Latency.** Probing candidates across multiple providers requires an initial audit run (typically 2-4 seconds with bounded concurrency). This is mitigated by TTL caching (6 hours), on-demand single-model re-checking, and dry-run estimation.
+- **Provider Quota Consumption.** Free tiers must not be exhausted by verification. Configurable probe caps (`max_probes_per_provider=15`), auth-failure circuit-breaking, and quota-exhausted early stopping protect free tier allotments.
+
 

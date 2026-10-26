@@ -77,6 +77,12 @@ class Settings(BaseSettings):
     max_dataset_rows: int = 2000
     max_upload_bytes: int = 10 * 1024 * 1024
 
+    # --- Model Audit Settings -------------------------------------------
+    model_audit_ttl_hours: int = 6
+    max_probes_per_provider: int = 15
+    max_probe_concurrency: int = 3
+    probe_timeout_seconds: float = 10.0
+
     # --- RAG -------------------------------------------------------------
     embedding_backend: str = Field(default="hashing")  # hashing | gemini | sentence-transformers
     embedding_model: str = "text-embedding-004"

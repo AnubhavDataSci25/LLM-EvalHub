@@ -510,6 +510,28 @@ class EvaluationRunner:
                 )
             )
 
+        if status == "error" and state.get("error_kind") in (
+            "model_unavailable",
+            "not_entitled",
+            "quota_exhausted",
+            "invalid_credentials",
+        ):
+            from app.core.exceptions import ProviderError
+            from app.services.audit_service import AuditService
+
+            try:
+                AuditService(db).record_evaluation_failure(
+                    state["provider"],
+                    state["model"],
+                    ProviderError(
+                        state.get("error_message") or "Runtime failure",
+                        provider=state["provider"],
+                        kind=state["error_kind"],
+                    ),
+                )
+            except Exception:
+                logger.exception("Failed to auto-invalidate model cache on failure")
+
     @staticmethod
     def _build_summary(results: list[EvaluationResult], experiment: Experiment) -> dict[str, Any]:
         metrics = list(experiment.metrics or [])

@@ -19,7 +19,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import {
   Badge,
@@ -41,7 +41,7 @@ import {
 } from '../components/ui'
 import { useApi } from '../hooks'
 import { api } from '../lib/api'
-import { metricKindLabel, num, titleCase } from '../lib/format'
+import { metricKindLabel, num, relativeTime, titleCase } from '../lib/format'
 
 const DEFAULT_SYSTEM_PROMPT =
   'You are a precise assistant being evaluated for factual accuracy. Answer from the supplied context. If the context does not contain the answer, say so plainly rather than guessing. Keep answers concise.'
@@ -53,12 +53,20 @@ export default function NewEvaluation() {
   const navigate = useNavigate()
   const toast = useToast()
   const [params] = useSearchParams()
+  const [showLimited, setShowLimited] = useState(false)
 
   const { data: datasetsPayload, loading: datasetsLoading } = useApi(() => api.datasets({ limit: 100 }), [])
   const { data: providersPayload, loading: providersLoading, error: providersError } = useApi(
     () => api.providers(true),
     [],
   )
+  const { data: availableModelsData, loading: modelsLoading } = useApi(
+    () => api.allProviderModels({ include_limited: showLimited }),
+    [showLimited],
+  )
+  const { data: readyData } = useApi(() => api.readyCheck(), [])
+  const defaultEvaluator = readyData?.default_evaluator
+
   const { data: metricsPayload } = useApi(() => api.metricCatalogue(), [])
   const { data: documentsPayload } = useApi(() => api.documents(), [])
 
@@ -107,21 +115,26 @@ export default function NewEvaluation() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDataset])
 
-  const modelOptions = useMemo(
-    () =>
-      configured.flatMap((provider) =>
-        (provider.models || []).map((model) => ({
-          key: `${provider.key}/${model.id}`,
-          provider: provider.key,
-          providerName: provider.display_name,
-          model: model.id,
-          label: model.name || model.id,
-          context: model.context_window,
-          note: model.note,
-        })),
-      ),
-    [configured],
-  )
+  const modelOptions = useMemo(() => {
+    if (!availableModelsData?.models) return []
+    return Object.entries(availableModelsData.models).flatMap(([pKey, models]) => {
+      const provider = providers.find((p) => p.key === pKey)
+      return (models || []).map((model) => ({
+        key: `${pKey}/${model.id}`,
+        provider: pKey,
+        providerName: provider?.display_name || pKey,
+        model: model.id,
+        label: model.label || model.id,
+        context: model.context_window,
+        status: model.status,
+        reason: model.reason,
+        latency_ms: model.latency_ms,
+        last_checked_at: model.last_checked_at,
+        retry_after: model.retry_after,
+        tier: model.tier,
+      }))
+    })
+  }, [availableModelsData, providers])
 
   const toggleModel = (option) => {
     const exists = form.models.some((m) => m.provider === option.provider && m.model === option.model)
@@ -184,11 +197,22 @@ export default function NewEvaluation() {
     }
   }
 
-  const judgeModels =
-    providers.find((p) => p.key === form.judgeProvider)?.models?.map((m) => ({
-      value: m.id,
-      label: m.name || m.id,
-    })) || []
+  const judgeProviders = useMemo(() => {
+    return configured
+      .filter((p) => p.key !== 'mock')
+      .filter((p) => (availableModelsData?.models?.[p.key] || []).some((m) => m.status === 'AVAILABLE'))
+      .map((p) => ({ value: p.key, label: p.display_name }))
+  }, [configured, availableModelsData])
+
+  const judgeModels = useMemo(() => {
+    if (!form.judgeProvider || !availableModelsData?.models?.[form.judgeProvider]) return []
+    return (availableModelsData.models[form.judgeProvider] || [])
+      .filter((m) => m.status === 'AVAILABLE')
+      .map((m) => ({
+        value: m.id,
+        label: `${m.label || m.id}${m.latency_ms ? ` (${Math.round(m.latency_ms)}ms)` : ''}`,
+      }))
+  }, [form.judgeProvider, availableModelsData])
 
   const estimatedUnits = (selectedDataset?.row_count || 0) * form.models.length
 
@@ -261,43 +285,82 @@ export default function NewEvaluation() {
               <SectionHeader
                 icon={Cpu}
                 title="Models"
-                description="Selected models receive identical inputs, so any difference in results is attributable to the model."
+                description="Only verifiably available models are shown. Probe latencies and verification timestamps reflect recent live checks."
                 actions={<Badge tone={form.models.length ? 'accent' : 'neutral'}>{form.models.length} selected</Badge>}
               />
+
+              <div className="mb-4 flex items-center justify-between rounded-lg border border-line bg-surface/40 px-3 py-2">
+                <div>
+                  <p className="text-xs font-medium text-ink">Show temporarily limited models</p>
+                  <p className="prose-note text-[0.72rem]">Include models that returned 429 / quota limit during verification.</p>
+                </div>
+                <Toggle checked={showLimited} onChange={setShowLimited} />
+              </div>
+
               {modelOptions.length === 0 ? (
-                <InlineNote tone="warn">
-                  No models are available. Configure a provider key and reload.
-                </InlineNote>
+                <div className="space-y-3">
+                  <InlineNote tone="warn" icon={AlertTriangle}>
+                    No verified models are currently available. Run an audit in{' '}
+                    <Link to="/settings" className="font-semibold text-accent underline">
+                      Settings
+                    </Link>{' '}
+                    to probe and verify available models against your API keys.
+                  </InlineNote>
+                </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {configured.map((provider) => {
                     const options = modelOptions.filter((m) => m.provider === provider.key)
-                    if (!options.length) return null
                     return (
-                      <div key={provider.key}>
-                        <div className="mb-2 flex items-center gap-2">
-                          <p className="label">{provider.display_name}</p>
-                          <Badge tone={provider.key === 'mock' ? 'fair' : 'good'}>
-                            {provider.key === 'mock' ? 'test fixture' : provider.kind}
-                          </Badge>
+                      <div key={provider.key} className="rounded-lg border border-line bg-surface/50 p-3.5">
+                        <div className="mb-2.5 flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <p className="label">{provider.display_name}</p>
+                            <Badge tone={provider.key === 'mock' ? 'fair' : 'good'}>
+                              {provider.key === 'mock' ? 'test fixture' : provider.kind}
+                            </Badge>
+                          </div>
+                          <span className="text-[0.75rem] text-muted">
+                            {options.length} {options.length === 1 ? 'model' : 'models'} available
+                          </span>
                         </div>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          {options.map((option) => (
-                            <Checkbox
-                              key={option.key}
-                              checked={form.models.some(
-                                (m) => m.provider === option.provider && m.model === option.model,
-                              )}
-                              onChange={() => toggleModel(option)}
-                              label={option.label}
-                              description={
-                                option.context
-                                  ? `${num(option.context)} token context`
-                                  : option.note || option.model
-                              }
-                            />
-                          ))}
-                        </div>
+
+                        {options.length === 0 ? (
+                          <p className="prose-note text-xs text-muted">
+                            No verified models for {provider.display_name}.{' '}
+                            <Link to="/settings" className="text-accent underline hover:text-accent/80">
+                              Run audit in Settings
+                            </Link>{' '}
+                            or check credentials.
+                          </p>
+                        ) : (
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {options.map((option) => (
+                              <Checkbox
+                                key={option.key}
+                                checked={form.models.some(
+                                  (m) => m.provider === option.provider && m.model === option.model,
+                                )}
+                                onChange={() => toggleModel(option)}
+                                label={
+                                  <span className="flex items-center gap-1.5">
+                                    <span>{option.label}</span>
+                                    {option.status === 'RATE_LIMITED' && (
+                                      <Badge tone="warn" className="text-[0.65rem] px-1 py-0">Limited</Badge>
+                                    )}
+                                  </span>
+                                }
+                                description={
+                                  option.status === 'RATE_LIMITED'
+                                    ? `Rate-limited · retry after ${option.retry_after || '60'}s`
+                                    : `verified ${relativeTime(option.last_checked_at)}${
+                                        option.latency_ms ? ` · ${Math.round(option.latency_ms)}ms` : ''
+                                      }${option.context ? ` · ${num(option.context)} tokens` : ''}`
+                                }
+                              />
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )
                   })}
@@ -430,6 +493,28 @@ export default function NewEvaluation() {
 
                 <div className="border-t border-line pt-4">
                   <p className="label mb-3">LLM judge (optional)</p>
+                  {defaultEvaluator?.warning ? (
+                    <div className="mb-3">
+                      <InlineNote tone="warn" icon={AlertTriangle}>
+                        <span className="text-[0.75rem]">{defaultEvaluator.warning}</span>
+                        {defaultEvaluator.suggested_alternative ? (
+                          <span className="mt-1 block text-[0.75rem] font-medium">
+                            Suggested alternative: {defaultEvaluator.suggested_alternative.provider}/
+                            {defaultEvaluator.suggested_alternative.model_id}
+                          </span>
+                        ) : null}
+                      </InlineNote>
+                    </div>
+                  ) : defaultEvaluator?.status === 'available' ? (
+                    <div className="mb-3">
+                      <InlineNote tone="good">
+                        <span className="text-[0.75rem]">
+                          Default judge: {defaultEvaluator.provider}/{defaultEvaluator.model} (verified)
+                        </span>
+                      </InlineNote>
+                    </div>
+                  ) : null}
+
                   <div className="space-y-3">
                     <Select
                       value={form.judgeProvider}
@@ -438,9 +523,7 @@ export default function NewEvaluation() {
                         set('judgeModel', '')
                       }}
                       placeholder="Deterministic only"
-                      options={configured
-                        .filter((p) => p.key !== 'mock')
-                        .map((p) => ({ value: p.key, label: p.display_name }))}
+                      options={judgeProviders}
                     />
                     {form.judgeProvider ? (
                       <Select

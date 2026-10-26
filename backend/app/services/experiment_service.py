@@ -21,6 +21,7 @@ from app.models.dataset import Dataset
 from app.models.experiment import EvaluationRun, Experiment, ExperimentModel
 from app.providers.registry import get_provider
 from app.schemas.experiment import ExperimentCreate, ModelSelection, RAGConfig
+from app.services.audit_service import AuditService
 from app.services.dataset_service import DatasetService
 
 logger = get_logger(__name__)
@@ -103,6 +104,9 @@ class ExperimentService:
 
     # -- write -----------------------------------------------------------
     def _validate_models(self, models: list[ModelSelection]) -> None:
+        from app.services.audit_service import AuditService
+
+        audit_service = AuditService(self.db)
         seen: set[tuple[str, str]] = set()
         for selection in models:
             key = (selection.provider, selection.model)
@@ -118,6 +122,37 @@ class ExperimentService:
                     "in the backend environment, or choose a configured provider.",
                     details={"provider": selection.provider},
                 )
+
+            cached = audit_service.get_latest_availability(selection.provider, selection.model)
+            if cached is not None:
+                if cached.status in ("NOT_FOUND", "NOT_ENTITLED", "INVALID_CREDENTIALS"):
+                    raise ValidationFailedError(
+                        f"Model '{selection.provider}/{selection.model}' cannot be used: "
+                        f"status is {cached.status} ({cached.reason}). Please select an available model.",
+                        details={
+                            "provider": selection.provider,
+                            "model": selection.model,
+                            "status": cached.status,
+                            "reason": cached.reason,
+                        },
+                    )
+                if not audit_service.is_fresh(cached.checked_at):
+                    raise ValidationFailedError(
+                        f"Cached availability for model '{selection.provider}/{selection.model}' has expired "
+                        f"(checked at {cached.checked_at.isoformat()}). A fresh re-check is required before running evaluations.",
+                        details={
+                            "provider": selection.provider,
+                            "model": selection.model,
+                            "checked_at": cached.checked_at.isoformat(),
+                        },
+                    )
+                if cached.status == "RATE_LIMITED":
+                    logger.warning(
+                        "Selected model '%s/%s' is currently rate limited (retry_after=%s)",
+                        selection.provider,
+                        selection.model,
+                        cached.retry_after,
+                    )
 
     def _validate_metrics(self, metrics: list[str], rag: RAGConfig) -> list[str]:
         metrics = [m for m in metrics if m in METRIC_SPECS] or list(DEFAULT_METRICS)
@@ -135,6 +170,13 @@ class ExperimentService:
             if not judge_provider.is_configured:
                 raise ValidationFailedError(
                     f"Judge provider '{payload.judge.provider}' is not configured."
+                )
+            cached_j = AuditService(self.db).get_latest_availability(
+                payload.judge.provider or "", payload.judge.model or ""
+            )
+            if cached_j is not None and cached_j.status in ("NOT_FOUND", "NOT_ENTITLED", "INVALID_CREDENTIALS"):
+                raise ValidationFailedError(
+                    f"Judge model '{payload.judge.provider}/{payload.judge.model}' is unavailable: {cached_j.status} ({cached_j.reason})."
                 )
 
         experiment = Experiment(

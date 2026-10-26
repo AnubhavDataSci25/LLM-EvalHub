@@ -210,12 +210,11 @@ class OpenAICompatibleProvider(LLMProvider):
             },
         )
 
-    async def list_models(self) -> list[ModelInfo]:
-        from app.providers.catalog import static_models
+    async def discover_models(self) -> list[ModelInfo]:
+        from app.providers.filtering import filter_chat_models
 
-        fallback = static_models(self.key)
         if not self.supports_model_discovery or not self.is_configured:
-            return fallback
+            return []
         url = f"{self.base_url}/models"
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
@@ -226,26 +225,53 @@ class OpenAICompatibleProvider(LLMProvider):
             if exc.response.status_code in (401, 403):
                 raise self._translate_http_error(exc) from exc
             logger.warning("model discovery failed for %s: %s", self.key, exc)
-            return fallback
+            return []
         except httpx.HTTPError as exc:
             logger.warning("model discovery unreachable for %s: %s", self.key, exc)
-            return fallback
+            return []
 
         items = data.get("data") if isinstance(data, dict) else data
         if not isinstance(items, list):
-            return fallback
-        discovered = [
-            ModelInfo(
-                id=str(item.get("id")),
-                provider=self.key,
-                label=str(item.get("name") or item.get("id")),
-                context_window=item.get("context_length") or item.get("context_window"),
-                description=(item.get("description") or None),
-                source="discovered",
+            return []
+
+        discovered: list[ModelInfo] = []
+        for item in items:
+            if not isinstance(item, dict) or not item.get("id"):
+                continue
+            mid = str(item.get("id"))
+            label = str(item.get("name") or mid)
+            context_window = item.get("context_length") or item.get("context_window")
+            desc = item.get("description") or None
+            arch = item.get("architecture") or {}
+            modality = arch.get("modality") or "text->text"
+            pricing = item.get("pricing") or {}
+            tier = "free" if ":free" in mid or (pricing and pricing.get("prompt") == "0") else None
+
+            discovered.append(
+                ModelInfo(
+                    id=mid,
+                    provider=self.key,
+                    label=label,
+                    context_window=int(context_window) if context_window else None,
+                    description=desc,
+                    source="discovered",
+                    modality=modality,
+                    pricing=pricing,
+                    tier=tier,
+                )
             )
-            for item in items
-            if isinstance(item, dict) and item.get("id")
-        ]
+
+        chat_models, _ = filter_chat_models(discovered)
+        return chat_models
+
+    async def list_models(self) -> list[ModelInfo]:
+        from app.providers.catalog import static_models
+
+        fallback = static_models(self.key)
+        if not self.supports_model_discovery or not self.is_configured:
+            return fallback
+
+        discovered = await self.discover_models()
         if not discovered:
             return fallback
         known = {m.id for m in discovered}

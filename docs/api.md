@@ -30,6 +30,7 @@ Base path `/api`. Interactive docs at `/docs`; schema at `/openapi.json`.
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/health` | Status, database kind, configured provider count, optional features |
+| GET | `/ready` | Readiness check; validates configured default evaluator (`DEFAULT_EVALUATOR_PROVIDER` / `DEFAULT_EVALUATOR_MODEL`) with availability warning and alternative suggestion |
 | GET | `/meta/metrics` | Metric catalogue with `default_kind`, `requires`, `judge_capable` |
 | GET | `/meta/failure-types` | Taxonomy and default thresholds |
 | GET | `/meta/profiles` | Recommendation weighting profiles |
@@ -40,6 +41,11 @@ Base path `/api`. Interactive docs at `/docs`; schema at `/openapi.json`.
 | Method | Path | Notes |
 |---|---|---|
 | GET | `/providers?with_models=true` | Status and models. **Never returns credentials.** |
+| GET | `/providers/status` | Provider status summary: counts per availability status, last audit timestamp |
+| GET | `/providers/models` | List verified `AVAILABLE` models grouped by provider (`include_limited`, `include_unavailable`) |
+| POST | `/providers/audit` | Run model availability audit with bounded concurrency (`dry_run=true` for call estimation) |
+| GET | `/providers/audit/{audit_id}` | Retrieve audit run progress, overall summary, and per-model diagnostic items |
+| POST | `/providers/{key}/models/{model_id}/recheck` | On-demand probe re-check of a single model |
 | GET | `/providers/{key}/models` | Model discovery |
 | GET | `/providers/{key}/health` | Connectivity check |
 

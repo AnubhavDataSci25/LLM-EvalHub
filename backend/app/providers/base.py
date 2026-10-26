@@ -48,6 +48,10 @@ class ModelInfo:
     context_window: int | None = None
     description: str | None = None
     source: str = "catalog"  # catalog | discovered
+    modality: str = "text->text"
+    pricing: dict[str, Any] = field(default_factory=dict)
+    tier: str | None = None  # free | paid | enterprise
+    status: str = "unverified"
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -57,6 +61,10 @@ class ModelInfo:
             "context_window": self.context_window,
             "description": self.description,
             "source": self.source,
+            "modality": self.modality,
+            "pricing": self.pricing,
+            "tier": self.tier,
+            "status": self.status,
         }
 
 
@@ -135,6 +143,13 @@ class LLMProvider(abc.ABC):
         from app.providers.catalog import static_models
 
         return static_models(self.key)
+
+    async def discover_models(self) -> list[ModelInfo]:
+        """Discover live models directly from the provider's API.
+
+        Queries the provider's model listing endpoint and filters to chat/text-generation models.
+        """
+        return await self.list_models()
 
     async def health(self) -> ProviderHealth:
         if not self.is_configured:

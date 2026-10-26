@@ -15,29 +15,29 @@ from app.providers.base import ModelInfo
 
 _CATALOG: dict[str, list[tuple[str, str]]] = {
     "gemini": [
-        ("gemini-2.5-flash", "Fast, general purpose"),
-        ("gemini-2.5-flash-lite", "Lowest latency tier"),
-        ("gemini-2.5-pro", "Highest capability tier"),
-        ("gemini-2.0-flash", "Previous generation workhorse"),
+        ("gemini-3-flash-preview", "Fast general-purpose frontier model (audited live)"),
+        ("gemini-3.1-flash-lite", "Lowest latency tier (audited live)"),
+        ("gemini-2.5-pro", "Highest capability frontier tier"),
+        ("gemini-2.5-flash", "Previous generation workhorse"),
     ],
     "groq": [
-        ("llama-3.3-70b-versatile", "Large open model, low latency"),
+        ("openai/gpt-oss-120b", "Open-weight MoE (audited live)"),
+        ("qwen/qwen3.8-27b", "Multilingual open model (audited live)"),
+        ("allam-2-7b", "Fast open instruct model (audited live)"),
+        ("openai/gpt-oss-20b", "Compact open model (audited live)"),
         ("llama-3.1-8b-instant", "Small, very low latency"),
-        ("openai/gpt-oss-120b", "Open-weight MoE"),
-        ("qwen/qwen3-32b", "Multilingual open model"),
     ],
     "huggingface": [
         ("meta-llama/Llama-3.3-70B-Instruct", "Routed via Inference Providers"),
         ("meta-llama/Llama-3.1-8B-Instruct", "Small instruct model"),
-        ("Qwen/Qwen2.5-7B-Instruct", "Compact instruct model"),
         ("deepseek-ai/DeepSeek-R1", "Reasoning-oriented model"),
         ("openai/gpt-oss-120b", "Open-weight MoE"),
     ],
     "openrouter": [
-        ("meta-llama/llama-3.3-70b-instruct", "Routed across upstream providers"),
-        ("google/gemma-3-27b-it", "Open Google model"),
+        ("meta-llama/llama-3.3-70b-instruct", "Routed across upstream providers (audited live)"),
+        ("google/gemma-3-27b-it", "Open Google model (audited live)"),
+        ("mistralai/mistral-small-3.2-24b-instruct", "Efficient mid-size model (audited live)"),
         ("qwen/qwen3-30b-a3b-instruct", "Open MoE model"),
-        ("mistralai/mistral-small-3.2-24b-instruct", "Efficient mid-size model"),
     ],
     "nvidia_nim": [
         ("meta/llama-3.3-70b-instruct", "NIM-hosted Llama"),
@@ -56,7 +56,14 @@ _CATALOG: dict[str, list[tuple[str, str]]] = {
 
 def static_models(provider: str) -> list[ModelInfo]:
     return [
-        ModelInfo(id=mid, provider=provider, label=mid, description=desc, source="catalog")
+        ModelInfo(
+            id=mid,
+            provider=provider,
+            label=mid,
+            description=desc,
+            source="catalog",
+            status="unverified",
+        )
         for mid, desc in _CATALOG.get(provider, [])
     ]
 

@@ -77,6 +77,7 @@ Every judge-scored metric is traceable to a measured reliability figure (Cohen's
 |---|---|
 | **Datasets** | CSV/JSON import with flexible column mapping, validation with per-row errors and warnings, automatic versioning, inline editing |
 | **Providers** | Gemini, Groq, Hugging Face, NVIDIA NIM, OpenRouter, optional Ollama, plus a deterministic test provider — all behind one interface |
+| **Model audit** | Live model discovery, cheap 8-token verification probes, non-chat filtering, and availability caching so only models confirmed usable right now are surfaced |
 | **Model runner** | Bounded-concurrency execution with retries, progressive persistence, per-unit error isolation |
 | **Evaluation** | Correctness, answer relevance, faithfulness, context precision/recall, latency, retrieval hit rate, response length |
 | **RAG** | PDF/TXT/Markdown ingestion, chunking with page citations, vector / BM25 / hybrid retrieval, retrieval preview |

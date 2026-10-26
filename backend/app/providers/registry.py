@@ -50,6 +50,10 @@ def provider_keys() -> list[str]:
     return [k for k in PROVIDER_ORDER if k in _PROVIDER_CLASSES]
 
 
+def is_provider_registered(key: str) -> bool:
+    return key in _PROVIDER_CLASSES
+
+
 def get_provider(key: str) -> LLMProvider:
     """Build a provider adapter. Credentials are read from settings at build time."""
     cls = _PROVIDER_CLASSES.get(key)

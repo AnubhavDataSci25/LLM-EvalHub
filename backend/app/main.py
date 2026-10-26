@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -51,6 +52,20 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.app_env,
         "postgresql" if settings.database_url.startswith("postgres") else "sqlite",
     )
+    try:
+        from app.db.session import SessionLocal
+        from app.services.audit_service import AuditService
+
+        with SessionLocal() as session:
+            eval_check = AuditService(session).check_default_evaluator()
+            if eval_check.get("warning"):
+                alt_msg = ""
+                if eval_check.get("suggested_alternative"):
+                    alt = eval_check["suggested_alternative"]
+                    alt_msg = f" Suggested alternative: {alt['provider']}/{alt['model_id']}."
+                logger.warning("[Startup] %s%s", eval_check["warning"], alt_msg)
+    except Exception as e:
+        logger.debug("Failed startup default evaluator check: %s", e)
     yield
     logger.info("%s shutting down", settings.app_name)
 
@@ -99,7 +114,7 @@ async def validation_error_handler(_: Request, exc: RequestValidationError) -> J
             "error": {
                 "code": "validation_failed",
                 "message": "The request payload failed validation.",
-                "details": exc.errors(),
+                "details": jsonable_encoder(exc.errors()),
             }
         },
     )

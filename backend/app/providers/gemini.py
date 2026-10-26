@@ -148,12 +148,11 @@ class GeminiProvider(LLMProvider):
             raw_meta={"block_reason": block_reason} if block_reason else {},
         )
 
-    async def list_models(self) -> list[ModelInfo]:
-        from app.providers.catalog import static_models
+    async def discover_models(self) -> list[ModelInfo]:
+        from app.providers.filtering import filter_chat_models
 
-        fallback = static_models(self.key)
         if not self.is_configured:
-            return fallback
+            return []
         try:
             async with httpx.AsyncClient(timeout=20.0) as client:
                 response = await client.get(
@@ -165,10 +164,10 @@ class GeminiProvider(LLMProvider):
             if exc.response.status_code in (401, 403):
                 raise self._translate_http_error(exc) from exc
             logger.warning("gemini model discovery failed: %s", exc)
-            return fallback
+            return []
         except httpx.HTTPError as exc:
             logger.warning("gemini model discovery unreachable: %s", exc)
-            return fallback
+            return []
 
         models: list[ModelInfo] = []
         for item in data.get("models", []):
@@ -184,10 +183,24 @@ class GeminiProvider(LLMProvider):
                     context_window=item.get("inputTokenLimit"),
                     description=item.get("description"),
                     source="discovered",
+                    modality="text->text",
+                    tier="free",
                 )
             )
-        if not models:
+
+        chat_models, _ = filter_chat_models(models)
+        return chat_models
+
+    async def list_models(self) -> list[ModelInfo]:
+        from app.providers.catalog import static_models
+
+        fallback = static_models(self.key)
+        if not self.is_configured:
             return fallback
-        known = {m.id for m in models}
-        models.extend(m for m in fallback if m.id not in known)
-        return models
+
+        discovered = await self.discover_models()
+        if not discovered:
+            return fallback
+        known = {m.id for m in discovered}
+        discovered.extend(m for m in fallback if m.id not in known)
+        return discovered

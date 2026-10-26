@@ -4,21 +4,51 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.db.session import get_db
 from app.evaluation.aggregators import DEFAULT_WEIGHTS
 from app.evaluation.failure_detector import FAILURE_TYPES, FailureThresholds
 from app.evaluation.ragas_adapter import ragas_available
 from app.evaluation.registry import DEFAULT_METRICS, METRIC_SPECS, RAG_METRICS
 from app.rag.vector_store import faiss_available
 from app.schemas.common import HealthResponse
+from app.services.audit_service import AuditService
 from app.services.provider_service import ProviderService
 from app.services.recommendation_service import PROFILE_DESCRIPTIONS, PROFILES
 
 router = APIRouter(tags=["meta"])
 
 VERSION = "1.0.0"
+
+
+@router.get("/ready", summary="Service readiness and default evaluator validation")
+def ready(db: Session = Depends(get_db)) -> dict[str, Any]:
+    configured, total = ProviderService.configured_count()
+    audit_svc = AuditService(db)
+    evaluator_status = audit_svc.check_default_evaluator()
+
+    is_ready = True
+    if evaluator_status.get("status") in (
+        "not_found",
+        "not_entitled",
+        "invalid_credentials",
+        "unconfigured_provider",
+    ):
+        is_ready = False
+
+    return {
+        "status": "ready" if is_ready else "degraded",
+        "app": settings.app_name,
+        "version": VERSION,
+        "environment": settings.app_env,
+        "database": "postgresql" if settings.database_url.startswith("postgres") else "sqlite",
+        "providers_configured": configured,
+        "providers_total": total,
+        "default_evaluator": evaluator_status,
+    }
 
 
 @router.get("/health", response_model=HealthResponse, summary="Service health")

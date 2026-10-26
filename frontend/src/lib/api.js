@@ -68,14 +68,21 @@ const del = (url) => client.delete(url).then((r) => r.data)
 
 export const api = {
   health: () => get('/health'),
+  readyCheck: () => get('/ready'),
   metricCatalogue: () => get('/meta/metrics'),
   failureTypes: () => get('/meta/failure-types'),
   profiles: () => get('/meta/profiles'),
   dashboard: () => get('/dashboard'),
 
   providers: (withModels = false) => get('/providers', { params: { with_models: withModels } }),
+  providerStatus: () => get('/providers/status'),
+  allProviderModels: (params) => get('/providers/models', { params }),
   providerModels: (key) => get(`/providers/${key}/models`),
   providerHealth: (key) => get(`/providers/${key}/health`),
+  runProviderAudit: (body) => post('/providers/audit', body),
+  getProviderAudit: (id) => get(`/providers/audit/${id}`),
+  recheckModel: (provider, modelId) =>
+    post(`/providers/${encodeURIComponent(provider)}/models/${encodeURIComponent(modelId)}/recheck`),
 
   datasets: (params) => get('/datasets', { params }),
   dataset: (id, params) => get(`/datasets/${id}`, { params }),

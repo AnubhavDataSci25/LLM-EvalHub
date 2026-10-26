@@ -58,6 +58,15 @@ class MockProvider(LLMProvider):
         "always_fail",
         "parametric",
         "context_free",
+        "rate_limited",
+        "not_entitled",
+        "not_found",
+        "invalid_credentials",
+        "upstream_error",
+        "empty_response",
+        "available",
+        "embed_text",
+        "guard_classifier",
     )
 
     def __init__(self, api_key: str | None = None, base_url: str | None = None) -> None:
@@ -93,14 +102,43 @@ class MockProvider(LLMProvider):
                 kind="timeout",
                 retryable=True,
             )
-        if behaviour == "error":
+        if behaviour in ("error", "upstream_error"):
             raise ProviderError(
                 "Deterministic test provider simulated an upstream failure.",
                 provider=self.key,
                 kind="upstream_error",
+                status=503,
                 retryable=True,
             )
-        if behaviour == "empty":
+        if behaviour == "rate_limited":
+            from app.core.exceptions import RateLimitedError
+
+            raise RateLimitedError(self.key, retry_after=30.0)
+        if behaviour == "not_entitled":
+            raise ProviderError(
+                "Plan restricted: Enterprise tier or payment required for this model.",
+                provider=self.key,
+                kind="quota_exhausted",
+                status=403,
+                retryable=False,
+            )
+        if behaviour == "not_found":
+            raise ProviderError(
+                "Model 'mock-not-found' does not exist or has been retired.",
+                provider=self.key,
+                kind="model_unavailable",
+                status=404,
+                retryable=False,
+            )
+        if behaviour == "invalid_credentials":
+            raise ProviderError(
+                "Authentication failed: invalid test credentials.",
+                provider=self.key,
+                kind="invalid_credentials",
+                status=401,
+                retryable=False,
+            )
+        if behaviour in ("empty", "empty_response"):
             text = ""
         else:
             text = self._answer(prompt, behaviour)
@@ -195,14 +233,23 @@ class MockProvider(LLMProvider):
             return "The documented value is 90 days according to the 2023 revision."
         return "No supporting context was provided, so this answer cannot be grounded."
 
-    async def list_models(self) -> list[ModelInfo]:
-        return [
+    async def discover_models(self) -> list[ModelInfo]:
+        from app.providers.filtering import filter_chat_models
+
+        raw_models = [
             ModelInfo(
-                id=f"mock-{b}",
+                id=f"mock-{b.replace('_', '-')}",
                 provider=self.key,
                 label=f"mock · {b}",
                 description=f"Deterministic '{b}' behaviour for testing the pipeline.",
                 context_window=8192,
+                source="discovered",
+                tier="free",
             )
             for b in self.BEHAVIOURS
         ]
+        chat_models, _ = filter_chat_models(raw_models)
+        return chat_models
+
+    async def list_models(self) -> list[ModelInfo]:
+        return await self.discover_models()

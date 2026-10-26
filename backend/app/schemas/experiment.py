@@ -327,6 +327,9 @@ class ProviderModelRead(BaseModel):
     context_window: int | None = None
     description: str | None = None
     source: str = "catalog"
+    modality: str = "text->text"
+    tier: str | None = None
+    status: str = "unverified"
 
 
 class ProviderRead(BaseModel):

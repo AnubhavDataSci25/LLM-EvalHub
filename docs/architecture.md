@@ -60,7 +60,7 @@ Three properties this buys:
 
 ## Data model
 
-20 tables. The spine:
+22 tables. The spine:
 
 ```
 Dataset ─< DatasetVersion ─< TestCase
@@ -73,10 +73,29 @@ Experiment ───────┘  ─< ExperimentModel
                                                             └─< AttributionCondition (1:N)
 
 Document ─< DocumentChunk        Recommendation      Report
-HumanLabel ─< CalibrationRun
+HumanLabel ─< CalibrationRun     AuditRun ─< ModelAvailability
 ```
 
 `Experiment.parent_experiment_id` gives improvement lineage. `EvaluationRun.config_snapshot` freezes everything needed to reproduce a run at submission time, so later edits to an experiment never retroactively change what a past run claims to have tested.
+
+## Model Availability Audit
+
+To prevent silent evaluation failures from retired checkpoints, unentitled tiers, or exhausted quotas, model selection is grounded in empirical verification rather than static catalogs:
+
+```
+Provider discovery (/models or /tags)
+  │
+  ├─ Data-driven non-chat filtering (embeddings, moderation, speech, image, rerankers, guard models)
+  │
+  └─ Cheap live probe (8 tokens, temperature 0, fixed prompt)
+       │
+       ├─ AVAILABLE           → Cached with latency_ms and TTL (6h)
+       ├─ RATE_LIMITED        → Cached with retry_after (opt-in toggle in UI)
+       ├─ NOT_ENTITLED / 404  → Cached with reason; auto-rejects experiment creation (422)
+       └─ INVALID_CREDENTIALS → Immediately stops further probes for this provider
+```
+
+Selection screens read from `ModelAvailability` cache without network overhead on page load. Evaluation runs automatically invalidate cached models upon runtime provider errors (`NOT_FOUND`, `NOT_ENTITLED`), preventing future dead runs. Default evaluator configuration is validated at startup and via `/ready`.
 
 ## Counterfactual Attribution Workflow
 
