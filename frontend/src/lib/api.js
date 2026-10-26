@@ -124,6 +124,10 @@ export const api = {
   failure: (id) => get(`/failures/${id}`),
   failureDistribution: (params) => get('/failures/distribution', { params }),
   diagnose: (id, body = {}) => post(`/failures/${id}/diagnose`, body),
+  failureAttribution: (id) => get(`/failures/${id}/attribution`),
+  runFailureAttribution: (id, body = {}) => post(`/failures/${id}/attribution`, body),
+  experimentAttributionSummary: (id) => get(`/experiments/${id}/attribution/summary`),
+  runExperimentAttribution: (id, body = {}) => post(`/experiments/${id}/attribution`, body),
 
   recommendations: () => get('/recommendations'),
   recommendation: (id) => get(`/recommendations/${id}`),

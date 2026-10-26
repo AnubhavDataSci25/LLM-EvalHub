@@ -146,3 +146,25 @@ A test sets a sentinel credential and asserts it appears nowhere in any API resp
 - **Sample size limits:** With fewer than 10 labels, kappa estimation is underpowered; the system returns `insufficient_labels` with no fabricated kappa.
 - **Landis-Koch conventional boundaries:** Landis-Koch thresholds ($<0$ poor, $0\text{--}0.20$ slight, $0.21\text{--}0.40$ fair, $0.41\text{--}0.60$ moderate, $0.61\text{--}0.80$ substantial, $0.81\text{--}1.00$ almost perfect) are widely used conventions in NLP and medical literature, but are domain-dependent guidelines rather than universal thresholds.
 
+---
+
+## ADR-013 — Counterfactual failure attribution over threshold heuristics
+
+**Decision.** When a RAG test case fails, we determine whether retrieval, generation, or both caused the failure by empirically re-running the case under controlled counterfactual conditions (`ORACLE_CONTEXT`, `NO_CONTEXT`, and optional `DISTRACTOR_ONLY`) and comparing results against the stored `ORIGINAL`. The heuristic diagnosis cascade is retained strictly as a fallback when attribution cannot run.
+
+**Why.**
+1. **Correlation vs Intervention.** Observational metric heuristics (e.g., `context_precision < 0.5` $\to$ flag retrieval failure) conflate correlation with causation. A model might fail even when supplied with the gold context passage (meaning the generation prompt or model capability was the true bottleneck). Conversely, a model may answer correctly from memory despite terrible retrieval. Controlled intervention isolates the exact point of failure.
+2. **Deterministic Attribution Logic.**
+   - `ORIGINAL` fails $\land$ `ORACLE_CONTEXT` passes $\to$ `RETRIEVAL_CAUSED` (retrieval was the bottleneck; prompt/model are fine).
+   - `ORIGINAL` fails $\land$ `ORACLE_CONTEXT` fails $\land$ `NO_CONTEXT` fails $\to$ `GENERATION_CAUSED` (generation, prompt, or judge bottleneck).
+   - `ORIGINAL` fails $\land$ `ORACLE_CONTEXT` fails $\land$ `NO_CONTEXT` passes $\to$ `PARAMETRIC_KNOWLEDGE` (context-ignoring; model is distracted or biased by context).
+   - `ORIGINAL` passes $\land$ `NO_CONTEXT` passes $\to$ `NOT_CONTEXT_DEPENDENT` (question does not test RAG; parametric knowledge suffices).
+   - Missing gold context or provider error $\to$ `NOT_ATTRIBUTABLE` (never fabricate or infer unrun conditions).
+3. **Honesty About Generation Noise.** LLM outputs are stochastic. Running only a single trial ($N=1$) risks misattribution due to run-to-run sampling variance. We support configurable repeats ($N \in [1, 5]$) per condition, compute empirical pass rates across trials, state in the verdict when $N=1$, and cap confidence at 0.95 (never claim certainty).
+4. **Idempotence and Free-Tier Quota Protection.** Batch attribution caps runs at 10 by default (maximum 50) and supports a `dry_run` mode providing exact call count estimates ($2 \times N$ or $3 \times N$) before confirmation. Re-running attribution on a failure atomically updates existing records (`attribution_runs` and `attribution_conditions`) without duplicate clutter.
+
+**Trade-offs.**
+- **Cost and Latency.** Running counterfactual conditions incurs additional provider API calls and latency. Dry-run call estimation, batch capping, and caching are necessary safeguards.
+- **Gold Context Dependency.** Retrieval attribution fundamentally relies on high-quality reference context (`expected_sources` or `context`). When the reference dataset lacks gold passages, the system falls back to `NOT_ATTRIBUTABLE` and the rule-based heuristic cascade.
+
+

@@ -181,6 +181,43 @@ class ReportService:
                     "no human agreement has been measured."
                 )
 
+        attribution_block = None
+        if experiment:
+            from app.models.attribution import AttributionRun
+
+            att_runs = list(
+                self.db.execute(
+                    select(AttributionRun).where(AttributionRun.experiment_id == experiment.id)
+                ).scalars().all()
+            )
+            v_counts: dict[str, int] = {}
+            for ar in att_runs:
+                v_counts[ar.verdict] = v_counts.get(ar.verdict, 0) + 1
+            total_att = len(att_runs)
+            retrieval_share = (
+                round(v_counts.get("RETRIEVAL_CAUSED", 0) / total_att, 4) if total_att > 0 else 0.0
+            )
+            generation_share = (
+                round(v_counts.get("GENERATION_CAUSED", 0) / total_att, 4) if total_att > 0 else 0.0
+            )
+            attribution_block = {
+                "total_attributed": total_att,
+                "total_failures": summary.get("failed_cases", 0),
+                "verdict_counts": v_counts,
+                "retrieval_caused_share": retrieval_share,
+                "generation_caused_share": generation_share,
+                "limitations": [
+                    "Attribution applies counterfactual controls to individual failed test cases; results reflect those specific cases, not general model performance.",
+                    "Attribution depends on the fidelity of gold context passages in test cases.",
+                    "Single-trial runs (N=1) do not capture LLM stochastic generation variance; N=3-5 repeats recommended for noisy tasks.",
+                ],
+            }
+            if total_att > 0:
+                findings.append(
+                    f"Counterfactual attribution on {total_att} failure(s): "
+                    f"{retrieval_share:.0%} retrieval-caused, {generation_share:.0%} generation-caused."
+                )
+
         content: dict[str, Any] = {
             "generated_at": datetime.now(UTC).isoformat(),
             "experiment": self._experiment_block(experiment, dataset),
@@ -221,6 +258,7 @@ class ReportService:
                 "error_kinds": summary.get("error_kinds", {}),
                 "cases": failures_block,
             },
+            "attribution": attribution_block,
             "rag": rag_block,
             "judge_reliability": judge_reliability_block,
             "recommendation": recommendation_block,

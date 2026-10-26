@@ -46,7 +46,19 @@ class MockProvider(LLMProvider):
     docs_url = ""
 
     #: behaviour switches encoded in the model id, e.g. "mock-extractive:empty"
-    BEHAVIOURS = ("extractive", "empty", "timeout", "error", "verbose", "hallucinate", "judge")
+    BEHAVIOURS = (
+        "extractive",
+        "empty",
+        "timeout",
+        "error",
+        "verbose",
+        "hallucinate",
+        "judge",
+        "oracle_only",
+        "always_fail",
+        "parametric",
+        "context_free",
+    )
 
     def __init__(self, api_key: str | None = None, base_url: str | None = None) -> None:
         super().__init__(api_key=api_key, base_url=base_url or "local://mock")
@@ -59,7 +71,7 @@ class MockProvider(LLMProvider):
     def _behaviour(cls, model: str) -> str:
         """Resolve the behaviour switch from the model id (`mock-<behaviour>`)."""
         token = model.split(":")[-1] if ":" in model else model
-        token = token.removeprefix("mock-").strip().lower()
+        token = token.removeprefix("mock-").strip().lower().replace("-", "_")
         return token if token in cls.BEHAVIOURS else "extractive"
 
     async def generate(
@@ -134,8 +146,35 @@ class MockProvider(LLMProvider):
                 "reasoning": f"Deterministic mock judge verdict ({digest[:8]}).",
                 "confidence": 0.85,
             })
+        if behaviour == "always_fail":
+            return "Incorrect answer: fabricated information that contradicts ground truth."
         context, question = self._split_prompt(prompt)
         q_tokens = _tokens(question)
+
+        if behaviour == "parametric":
+            if not context:
+                # Passes without context
+                return "The expected answer is 30 days according to standard policy."
+            # Fails / gets distracted when context is present
+            return "Confused by context formatting; unable to answer the question."
+
+        if behaviour == "context_free":
+            # Answers correctly whether context is present or not
+            return "The expected answer is 30 days according to standard policy."
+
+        if behaviour == "oracle_only":
+            # Only answers correctly if gold context is present
+            has_gold = "gold" in context.lower() or "oracle" in context.lower()
+            if has_gold and context:
+                sentences = [s.strip() for s in _SENTENCE_SPLIT.split(context) if s.strip()]
+                scored = sorted(
+                    sentences,
+                    key=lambda s: len(q_tokens & _tokens(s)) / (1 + 0.02 * len(s)),
+                    reverse=True,
+                )
+                return scored[0] if scored else "The expected answer is 30 days according to gold context."
+            return "Irrelevant retrieved text: unable to find the correct answer."
+
         if context:
             sentences = [s.strip() for s in _SENTENCE_SPLIT.split(context) if s.strip()]
             scored = sorted(

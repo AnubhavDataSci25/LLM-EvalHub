@@ -60,7 +60,7 @@ Three properties this buys:
 
 ## Data model
 
-16 tables. The spine:
+20 tables. The spine:
 
 ```
 Dataset ─< DatasetVersion ─< TestCase
@@ -69,11 +69,28 @@ Experiment ───────┘  ─< ExperimentModel
     │
     └─< EvaluationRun ─< EvaluationResult ─< MetricResult
                                   └──────── Failure ─→ diagnosis (JSON)
+                                               └────── AttributionRun (1:1)
+                                                            └─< AttributionCondition (1:N)
 
 Document ─< DocumentChunk        Recommendation      Report
+HumanLabel ─< CalibrationRun
 ```
 
 `Experiment.parent_experiment_id` gives improvement lineage. `EvaluationRun.config_snapshot` freezes everything needed to reproduce a run at submission time, so later edits to an experiment never retroactively change what a past run claims to have tested.
+
+## Counterfactual Attribution Workflow
+
+When a RAG failure case is investigated, `AttributionGraph` executes an empirical multi-stage intervention pipeline via LangGraph:
+
+```
+START ─→ build_inputs ─→ generate ─→ evaluate ─→ attribute ─→ persist ─→ END
+```
+
+1. **build_inputs**: Extracts the failed work unit's original input, test question, and gold reference passage (`expected_sources` or `context`). Formulates 3 controlled conditions: `ORIGINAL` (cached result), `ORACLE_CONTEXT` (context replaced with gold reference), and `NO_CONTEXT` (context completely cleared), with optional `DISTRACTOR_ONLY`. Expands trials across $N$ repeats ($N=1\dots 5$).
+2. **generate**: Executes generation under identical model, temperature, system prompt, and parameters using the typed provider layer. Captures latency, provider error kinds, and generated answers.
+3. **evaluate**: Evaluates generated trial responses against ground truth using lexical or LLM evaluators to calculate correctness and faithfulness metrics.
+4. **attribute**: Pure decision engine (`compute_attribution`) computes pass rates, checks thresholds from configuration, compares condition success, assigns attribution verdict (`RETRIEVAL_CAUSED`, `GENERATION_CAUSED`, `PARAMETRIC_KNOWLEDGE`, `NOT_CONTEXT_DEPENDENT`, `NOT_ATTRIBUTABLE`), caps confidence at 0.95, and compiles actionable recommendations.
+5. **persist**: Persists `AttributionRun` and individual trial records `AttributionCondition` with transaction safety, linking them directly to the `Failure` entity.
 
 ## Frontend
 

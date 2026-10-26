@@ -554,6 +554,38 @@ class RecommendationService:
             caveats.append(f"{len(excluded)} candidate(s) were excluded; see the candidate table.")
         if payload.max_latency_ms or payload.min_faithfulness or payload.min_correctness:
             caveats.append("Hard constraints were applied before ranking.")
+
+        # Check for empirical attribution caveat: if a model's failures were mostly retrieval-caused
+        candidates_to_check = ranked[:2] if ranked else excluded[:2]
+        if db is not None and candidates_to_check:
+            from app.models.attribution import AttributionRun
+
+            for cand in candidates_to_check:
+                c_prov = cand["provider"]
+                c_mod = cand["model"]
+                cand_result_ids = [
+                    r.id for r in results if r.provider == c_prov and r.model == c_mod
+                ]
+                if cand_result_ids:
+                    att_runs = list(
+                        db.execute(
+                            select(AttributionRun).where(
+                                AttributionRun.result_id.in_(cand_result_ids)
+                            )
+                        ).scalars().all()
+                    )
+                    if att_runs:
+                        retrieval_caused = sum(
+                            1 for a in att_runs if a.verdict == "RETRIEVAL_CAUSED"
+                        )
+                        retrieval_ratio = retrieval_caused / len(att_runs)
+                        if retrieval_ratio >= 0.5:
+                            caveats.append(
+                                f"Counterfactual attribution shows that {cand['label']}'s failures "
+                                f"were mostly retrieval-caused ({retrieval_ratio:.0%}, N={len(att_runs)}); "
+                                "the model itself succeeded when gold context was supplied."
+                            )
+
         return caveats
 
     def get(self, recommendation_id: str) -> Recommendation:

@@ -96,3 +96,36 @@ export const kappaTone = (value) => {
   if (value >= 0.2) return 'poor'
   return 'bad'
 }
+
+export const attributionTone = (verdict) => {
+  switch (verdict) {
+    case 'RETRIEVAL_CAUSED':
+      return 'fair'
+    case 'GENERATION_CAUSED':
+      return 'bad'
+    case 'PARAMETRIC_KNOWLEDGE':
+      return 'poor'
+    case 'NOT_CONTEXT_DEPENDENT':
+      return 'neutral'
+    case 'NOT_ATTRIBUTABLE':
+    default:
+      return 'neutral'
+  }
+}
+
+export const attributionLabel = (verdict) => {
+  switch (verdict) {
+    case 'RETRIEVAL_CAUSED':
+      return 'Retrieval-caused'
+    case 'GENERATION_CAUSED':
+      return 'Generation-caused'
+    case 'PARAMETRIC_KNOWLEDGE':
+      return 'Parametric knowledge'
+    case 'NOT_CONTEXT_DEPENDENT':
+      return 'Not context-dependent'
+    case 'NOT_ATTRIBUTABLE':
+      return 'Not attributable'
+    default:
+      return titleCase(verdict)
+  }
+}

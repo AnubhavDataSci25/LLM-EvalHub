@@ -6,13 +6,17 @@
  * what to change — then creates the follow-up experiment that tests the change.
  */
 import {
+  AlertTriangle,
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
   FlaskConical,
+  HelpCircle,
   Lightbulb,
   Sparkles,
+  Split,
   Stethoscope,
+  XCircle,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -34,9 +38,164 @@ import {
 } from '../components/ui'
 import { useApi } from '../hooks'
 import { api } from '../lib/api'
-import { NA, ms, score, scoreTone, titleCase } from '../lib/format'
+import {
+  NA,
+  attributionLabel,
+  attributionTone,
+  ms,
+  pct,
+  score,
+  scoreTone,
+  titleCase,
+} from '../lib/format'
 
 const SEVERITY_TONES = { critical: 'bad', high: 'bad', medium: 'poor', low: 'fair' }
+
+function AttributionModal({ failure, onClose, onAttributed }) {
+  const [repeats, setRepeats] = useState(1)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+
+  const estimatedCalls = repeats * 2
+
+  const run = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const att = await api.runFailureAttribution(failure.id, { repeats })
+      onAttributed(att)
+      onClose()
+    } catch (err) {
+      setError(err)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title="Run counterfactual failure attribution"
+      description="Determine empirically whether this failure was caused by retrieval or by generation by testing under controlled counterfactual conditions."
+      footer={
+        <>
+          <Button onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button variant="primary" icon={FlaskConical} loading={busy} onClick={run}>
+            {busy ? 'Running trials…' : `Confirm and run (${estimatedCalls} call${estimatedCalls > 1 ? 's' : ''})`}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div className="rounded-xl border border-line bg-overlay/50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-ink">Controlled conditions</p>
+          <ul className="mt-2 space-y-1.5 text-xs text-muted">
+            <li className="flex items-start gap-2">
+              <span className="mono font-semibold text-ink">ORACLE_CONTEXT:</span>
+              Replaces retrieved context with gold passage (from test case). If the model passes, retrieval was the bottleneck.
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="mono font-semibold text-ink">NO_CONTEXT:</span>
+              Removes context completely. Tests whether the model answers from parametric memory or ignores context.
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <label className="label mb-1.5 block">Repeats per condition (trial count)</label>
+          <div className="flex gap-2">
+            {[1, 3, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setRepeats(n)}
+                className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium transition ${
+                  repeats === n
+                    ? 'border-accent bg-accent-soft font-semibold text-ink'
+                    : 'border-line bg-surface text-muted hover:border-ink/20'
+                }`}
+              >
+                {n} {n === 1 ? 'trial (fastest)' : 'trials (robust)'}
+              </button>
+            ))}
+          </div>
+          <p className="prose-note mt-1.5 text-[0.75rem]">
+            {repeats === 1
+              ? 'Single trial gives instant results; repeats recommended if output is stochastic.'
+              : `Runs ${repeats} trials per condition to measure pass rates across generation variance.`}
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-line bg-surface p-3 text-xs">
+          <div className="flex items-center justify-between font-medium text-ink">
+            <span>Estimated provider calls:</span>
+            <span className="mono text-sm font-bold text-accent">{estimatedCalls}</span>
+          </div>
+          <p className="mt-1 text-[0.7rem] text-faint">
+            2 conditions × {repeats} trial(s). The original stored answer is reused and does not consume provider calls.
+          </p>
+        </div>
+
+        {error ? <ErrorState compact error={error} /> : null}
+      </div>
+    </Modal>
+  )
+}
+
+function ConditionCard({ title, subtitle, answer, scores, passed, error }) {
+  return (
+    <div
+      className={`flex flex-col justify-between rounded-xl border p-4 ${
+        passed ? 'border-[rgb(var(--good))]/40 bg-[rgb(var(--good))]/5' : 'border-line bg-surface'
+      }`}
+    >
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink">{title}</p>
+            <p className="text-[0.7rem] text-faint">{subtitle}</p>
+          </div>
+          {error ? (
+            <Badge tone="bad">error</Badge>
+          ) : passed ? (
+            <Badge tone="good" icon={CheckCircle2}>
+              Pass
+            </Badge>
+          ) : (
+            <Badge tone="bad" icon={XCircle}>
+              Fail
+            </Badge>
+          )}
+        </div>
+        <div className="mt-2 text-xs">
+          <p className="label mb-1 text-[0.68rem]">Generated answer</p>
+          {error ? (
+            <p className="rounded bg-bad/10 p-2 font-mono text-xs text-bad">{error}</p>
+          ) : answer ? (
+            <p className="max-h-36 overflow-y-auto whitespace-pre-wrap rounded-lg border border-line bg-overlay/40 p-2.5 leading-relaxed text-ink">
+              {answer}
+            </p>
+          ) : (
+            <p className="italic text-faint">No text generated</p>
+          )}
+        </div>
+      </div>
+      {scores && Object.keys(scores).length > 0 ? (
+        <div className="mt-3 space-y-1 border-t border-line pt-2.5">
+          {Object.entries(scores).map(([metric, val]) => (
+            <div key={metric} className="flex items-center justify-between text-[0.72rem]">
+              <span className="text-faint">{titleCase(metric)}</span>
+              <span className="mono font-medium text-ink">{score(val)}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  )
+}
 
 function ApplyModal({ suggestion, failure, onClose }) {
   const navigate = useNavigate()
@@ -138,7 +297,12 @@ export default function FailureDetail() {
   const toast = useToast()
   const [diagnosing, setDiagnosing] = useState(false)
   const [selected, setSelected] = useState(null)
+  const [showAttributionModal, setShowAttributionModal] = useState(false)
   const { data: failure, loading, error, refetch, setData } = useApi(() => api.failure(id), [id])
+  const { data: attribution, refetch: refetchAttribution, setData: setAttribution } = useApi(
+    () => api.failureAttribution(id),
+    [id],
+  )
 
   if (loading) return <LoadingState label="Loading failure…" />
   if (error) return <ErrorState error={error} onRetry={refetch} />
@@ -146,6 +310,15 @@ export default function FailureDetail() {
 
   const result = failure.result || {}
   const diagnosis = failure.diagnosis
+
+  const handleAttributed = (newAtt) => {
+    setAttribution(newAtt)
+    refetch()
+    toast.success(
+      `Attributed as ${attributionLabel(newAtt.verdict)} (confidence ${score(newAtt.confidence)}).`,
+      'Counterfactual test complete',
+    )
+  }
 
   const diagnose = async () => {
     setDiagnosing(true)
@@ -177,14 +350,25 @@ export default function FailureDetail() {
         title={titleCase(failure.failure_type)}
         description={failure.evidence?.[0]}
         actions={
-          <Button variant="primary" icon={Stethoscope} loading={diagnosing} onClick={diagnose}>
-            {diagnosis ? 'Re-run diagnosis' : 'Run AI diagnosis'}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              icon={FlaskConical}
+              onClick={() => setShowAttributionModal(true)}
+            >
+              {attribution ? 'Re-run attribution' : 'Counterfactual test'}
+            </Button>
+            <Button variant="primary" icon={Stethoscope} loading={diagnosing} onClick={diagnose}>
+              {diagnosis ? 'Re-run diagnosis' : 'Run AI diagnosis'}
+            </Button>
+          </div>
         }
       >
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <Badge tone={SEVERITY_TONES[failure.severity] || 'neutral'}>{failure.severity}</Badge>
-          <Badge tone="neutral">detector: {failure.detector}</Badge>
+          <Badge tone={failure.detector === 'counterfactual' ? 'accent' : 'neutral'}>
+            detector: {failure.detector}
+          </Badge>
           <Badge tone="neutral">confidence {score(failure.confidence)}</Badge>
           <span className="mono text-xs text-faint">{failure.provider} / {failure.model}</span>
           {failure.run_id ? (
@@ -194,6 +378,140 @@ export default function FailureDetail() {
           ) : null}
         </div>
       </PageHeader>
+
+      {/* ---------------------------------------------------------- counterfactual attribution */}
+      {attribution ? (
+        <Reveal>
+          <Card className="mb-6 border-accent/40 bg-surface p-5">
+            <SectionHeader
+              icon={FlaskConical}
+              title="Counterfactual failure attribution"
+              description={`Tested under controlled counterfactual conditions with N=${attribution.repeats} trial(s).`}
+              actions={
+                <div className="flex items-center gap-2">
+                  <Badge tone={attributionTone(attribution.verdict)}>
+                    {attributionLabel(attribution.verdict)}
+                  </Badge>
+                  {attribution.verdict !== 'NOT_ATTRIBUTABLE' ? (
+                    <Badge tone="neutral">confidence {score(attribution.confidence)}</Badge>
+                  ) : null}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    icon={FlaskConical}
+                    onClick={() => setShowAttributionModal(true)}
+                  >
+                    Re-test
+                  </Button>
+                </div>
+              }
+            />
+
+            {attribution.verdict === 'NOT_ATTRIBUTABLE' ? (
+              <div className="mb-4">
+                <InlineNote tone="bad" icon={AlertTriangle}>
+                  <span className="font-semibold text-ink">Cannot attribute: </span>
+                  {attribution.reason}
+                </InlineNote>
+              </div>
+            ) : (
+              <div className="mb-5 rounded-xl border border-line bg-overlay/50 p-4">
+                <p className="label mb-1.5">Attributed root cause</p>
+                <p className="text-sm font-medium leading-relaxed text-ink">{attribution.reason}</p>
+                {attribution.recommendation ? (
+                  <p className="mt-2 text-xs leading-relaxed text-muted">
+                    <span className="font-semibold text-ink">Remediation: </span>
+                    {attribution.recommendation}
+                  </p>
+                ) : null}
+              </div>
+            )}
+
+            {/* Condition side-by-side comparison */}
+            <div>
+              <p className="label mb-2.5">Controlled condition comparison</p>
+              <div className="grid gap-4 md:grid-cols-3">
+                <ConditionCard
+                  title="1. Original"
+                  subtitle="Stored evaluation result"
+                  answer={result.generated_answer}
+                  scores={result.metric_map}
+                  passed={attribution.condition_passes?.original ?? result.passed}
+                  error={result.error_kind ? `${result.error_kind}: ${result.error_message || ''}` : null}
+                />
+                <ConditionCard
+                  title="2. Oracle context"
+                  subtitle="Gold context from test case"
+                  answer={
+                    attribution.conditions?.find((c) => c.condition === 'oracle_context')?.generated_answer
+                  }
+                  scores={
+                    attribution.conditions_summary?.oracle_context?.avg_scores ||
+                    attribution.conditions?.find((c) => c.condition === 'oracle_context')?.scores
+                  }
+                  passed={attribution.condition_passes?.oracle_context}
+                  error={
+                    attribution.conditions_summary?.oracle_context?.error ||
+                    attribution.conditions?.find((c) => c.condition === 'oracle_context')?.error_message
+                  }
+                />
+                <ConditionCard
+                  title="3. No context"
+                  subtitle="Empty context (parametric)"
+                  answer={
+                    attribution.conditions?.find((c) => c.condition === 'no_context')?.generated_answer
+                  }
+                  scores={
+                    attribution.conditions_summary?.no_context?.avg_scores ||
+                    attribution.conditions?.find((c) => c.condition === 'no_context')?.scores
+                  }
+                  passed={attribution.condition_passes?.no_context}
+                  error={
+                    attribution.conditions_summary?.no_context?.error ||
+                    attribution.conditions?.find((c) => c.condition === 'no_context')?.error_message
+                  }
+                />
+              </div>
+            </div>
+
+            {attribution.evidence?.length ? (
+              <div className="mt-4 border-t border-line pt-3">
+                <p className="label mb-1.5">Empirical evidence</p>
+                <ul className="space-y-1">
+                  {attribution.evidence.map((item, idx) => (
+                    <li key={idx} className="flex gap-2 text-xs text-muted">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </Card>
+        </Reveal>
+      ) : (
+        <div className="mb-6">
+          <Card className="flex flex-wrap items-center justify-between gap-4 border-dashed border-accent/40 bg-accent-soft/30 p-4">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <FlaskConical className="h-4 w-4 text-accent" />
+                <p className="text-sm font-semibold text-ink">Empirical failure attribution</p>
+              </div>
+              <p className="mt-1 text-xs text-muted leading-relaxed">
+                Empirically isolate whether this failure was caused by retrieval or generation by re-running
+                the test case with the gold context and with empty context.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              icon={FlaskConical}
+              onClick={() => setShowAttributionModal(true)}
+            >
+              Run counterfactual test
+            </Button>
+          </Card>
+        </div>
+      )}
 
       {/* ---------------------------------------------------------- diagnosis */}
       {diagnosis ? (
@@ -373,6 +691,13 @@ export default function FailureDetail() {
       ) : null}
 
       <ApplyModal suggestion={selected} failure={failure} onClose={() => setSelected(null)} />
+      {showAttributionModal ? (
+        <AttributionModal
+          failure={failure}
+          onClose={() => setShowAttributionModal(false)}
+          onAttributed={handleAttributed}
+        />
+      ) : null}
     </>
   )
 }

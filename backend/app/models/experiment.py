@@ -11,7 +11,10 @@ Experiment
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from app.models.attribution import AttributionRun
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -226,3 +229,6 @@ class Failure(IDMixin, TimestampMixin, Base):
     diagnosis_source: Mapped[str | None] = mapped_column(String(32))  # llm|heuristic
 
     result: Mapped[EvaluationResult] = relationship(back_populates="failure")
+    attribution: Mapped[AttributionRun | None] = relationship(
+        "AttributionRun", back_populates="failure", cascade="all, delete-orphan", uselist=False
+    )

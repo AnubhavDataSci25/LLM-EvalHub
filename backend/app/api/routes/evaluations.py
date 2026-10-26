@@ -8,6 +8,13 @@ from fastapi import APIRouter, BackgroundTasks, File, Form, Query, Response, Upl
 
 from app.api.deps import DbSession, PageParams
 from app.core.exceptions import ValidationFailedError
+from app.schemas.attribution import (
+    AttributionRequest,
+    AttributionRunRead,
+    AttributionSummaryResponse,
+    BatchAttributionRequest,
+    BatchAttributionResponse,
+)
 from app.schemas.common import Acknowledgement
 from app.schemas.dashboard import DashboardResponse
 from app.schemas.dataset import (
@@ -30,6 +37,7 @@ from app.schemas.experiment import (
     ReportRequest,
     RunEvaluationRequest,
 )
+from app.services.attribution_service import AttributionService
 from app.services.comparison_service import ComparisonService
 from app.services.dashboard_service import DashboardService
 from app.services.diagnosis_service import DiagnosisService
@@ -120,6 +128,38 @@ def create_followup(
 @experiments_router.get("/{experiment_id}/outcome", summary="Before/after outcome for a follow-up")
 def experiment_outcome(experiment_id: str, db: DbSession) -> dict[str, Any]:
     return ImprovementService(db).outcome(experiment_id)
+
+
+@experiments_router.post(
+    "/{experiment_id}/attribution",
+    response_model=BatchAttributionResponse,
+    summary="Batch counterfactual attribution for an experiment",
+)
+async def run_experiment_attribution(
+    experiment_id: str, payload: BatchAttributionRequest, db: DbSession
+) -> BatchAttributionResponse:
+    service = AttributionService(db)
+    result = await service.attribute_experiment(
+        experiment_id=experiment_id,
+        only_categories=payload.categories,
+        max_cases=payload.max_cases,
+        repeats=payload.repeats,
+        dry_run=payload.dry_run,
+        include_distractor=payload.include_distractor,
+    )
+    return BatchAttributionResponse.model_validate(result)
+
+
+@experiments_router.get(
+    "/{experiment_id}/attribution/summary",
+    response_model=AttributionSummaryResponse,
+    summary="Attribution summary for an experiment",
+)
+def get_experiment_attribution_summary(
+    experiment_id: str, db: DbSession
+) -> AttributionSummaryResponse:
+    service = AttributionService(db)
+    return AttributionSummaryResponse.model_validate(service.get_experiment_summary(experiment_id))
 
 
 # ---------------------------------------------------------------------------
@@ -309,6 +349,36 @@ async def diagnose_failure(
     return _failure_block(failure, full=True)
 
 
+@failures_router.post(
+    "/{failure_id}/attribution",
+    response_model=AttributionRunRead,
+    summary="Run counterfactual failure attribution",
+)
+async def run_failure_attribution(
+    failure_id: str, payload: AttributionRequest, db: DbSession
+) -> AttributionRunRead:
+    service = AttributionService(db)
+    run = await service.attribute_failure(
+        failure_id=failure_id,
+        repeats=payload.repeats,
+        include_distractor=payload.include_distractor,
+    )
+    return AttributionRunRead.model_validate(service._run_to_dict(run))
+
+
+@failures_router.get(
+    "/{failure_id}/attribution",
+    response_model=AttributionRunRead | None,
+    summary="Get counterfactual failure attribution",
+)
+def get_failure_attribution(failure_id: str, db: DbSession) -> AttributionRunRead | None:
+    service = AttributionService(db)
+    run = service.get_attribution(failure_id)
+    if run is None:
+        return None
+    return AttributionRunRead.model_validate(service._run_to_dict(run))
+
+
 # ---------------------------------------------------------------------------
 # recommendations
 # ---------------------------------------------------------------------------
@@ -465,6 +535,13 @@ def _failure_block(failure, *, full: bool = False) -> dict[str, Any]:
         "composite_score": result.composite_score if result else None,
         "scores": result.metric_map if result else {},
     }
+    if getattr(failure, "attribution", None):
+        block["attribution"] = AttributionService._run_to_dict(failure.attribution)
+        block["attribution_confirmed"] = failure.attribution.verdict != "NOT_ATTRIBUTABLE"
+    elif (failure.signals or {}).get("attribution_verdict"):
+        block["attribution_verdict"] = failure.signals.get("attribution_verdict")
+        block["attribution_confirmed"] = bool(failure.signals.get("attribution_confirmed"))
+
     if full and result is not None:
         block["result"] = EvaluationResultRead.model_validate(result).model_dump()
     return block

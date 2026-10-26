@@ -107,6 +107,8 @@ class ImprovementService:
                 entry["failure_types"][failure.failure_type] = (
                     entry["failure_types"].get(failure.failure_type, 0) + 1
                 )
+                if (failure.signals or {}).get("attribution_confirmed"):
+                    entry["attribution_confirmed_count"] = entry.get("attribution_confirmed_count", 0) + 1
 
         suggestions = sorted(
             tally.values(), key=lambda s: -len(s["supporting_failures"])
@@ -114,6 +116,11 @@ class ImprovementService:
         for suggestion in suggestions:
             suggestion["support_count"] = len(suggestion["supporting_failures"])
             suggestion["supporting_failures"] = suggestion["supporting_failures"][:25]
+            if suggestion.get("attribution_confirmed_count"):
+                suggestion["detail"] = (
+                    f"{suggestion['detail']} (Confirmed by counterfactual attribution on "
+                    f"{suggestion['attribution_confirmed_count']} case(s))."
+                )
         return {
             "run_id": run_id,
             "total_failures": len(failures),

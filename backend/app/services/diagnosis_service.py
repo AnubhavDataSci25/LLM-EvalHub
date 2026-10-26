@@ -293,7 +293,8 @@ class DiagnosisService:
     def get_failure(self, failure_id: str) -> Failure:
         failure = self.db.execute(
             select(Failure).where(Failure.id == failure_id).options(
-                selectinload(Failure.result).selectinload(EvaluationResult.metrics)
+                selectinload(Failure.result).selectinload(EvaluationResult.metrics),
+                selectinload(Failure.attribution),
             )
         ).scalar_one_or_none()
         if failure is None:
@@ -314,7 +315,8 @@ class DiagnosisService:
         diagnosed: bool | None = None,
     ) -> tuple[list[Failure], int]:
         stmt = select(Failure).options(
-            selectinload(Failure.result).selectinload(EvaluationResult.metrics)
+            selectinload(Failure.result).selectinload(EvaluationResult.metrics),
+            selectinload(Failure.attribution),
         )
         if run_id:
             stmt = stmt.where(Failure.run_id == run_id)
@@ -406,18 +408,62 @@ class DiagnosisService:
         if result and result.error_kind:
             evidence.append(f"Provider reported '{result.error_kind}'.")
 
-        root_cause = {
-            "poor_retrieval": "The retriever did not return the passage containing the answer, so the model could not have answered correctly regardless of its capability.",
-            "unsupported_claim": "The answer contains at least one claim that the retrieved context does not support.",
-            "hallucination": "The model produced specific content that is both absent from the context and inconsistent with the expected answer.",
-            "incorrect_answer": "The model answered confidently but disagreed with the expected answer.",
-            "missing_information": "The answer is directionally right but omits part of the expected answer.",
-            "low_relevance": "The response did not address the question that was asked.",
-            "empty_response": "The provider returned a successful response containing no text.",
-            "timeout": "The provider did not respond within the configured timeout.",
-            "provider_error": "The request failed at the provider before any answer was generated.",
-            "high_latency": "Answer quality was acceptable but the response exceeded the latency budget.",
-        }.get(failure_type, "The measured scores fell below the configured thresholds.")
+        # Check if an empirical counterfactual attribution exists for this failure
+        from app.models.attribution import AttributionRun
+
+        attribution = getattr(failure, "attribution", None)
+        if attribution is None:
+            attribution = self.db.execute(
+                select(AttributionRun)
+                .where(AttributionRun.failure_id == failure.id)
+                .order_by(AttributionRun.created_at.desc())
+            ).scalars().first()
+
+        confirmed_by_attribution = False
+        attribution_verdict = None
+
+        if attribution and attribution.verdict != "NOT_ATTRIBUTABLE":
+            confirmed_by_attribution = True
+            attribution_verdict = attribution.verdict
+            evidence.insert(
+                0,
+                f"Empirical counterfactual test confirmed {attribution.verdict} "
+                f"(confidence {attribution.confidence:.2f}): {attribution.reason}",
+            )
+
+            if attribution.verdict == "RETRIEVAL_CAUSED":
+                failure_type = "poor_retrieval"
+                root_cause = (
+                    "Confirmed by counterfactual test: retrieval was the bottleneck. "
+                    "The model answered accurately when supplied with the gold context."
+                )
+            elif attribution.verdict == "GENERATION_CAUSED":
+                failure_type = "incorrect_answer"
+                root_cause = (
+                    "Confirmed by counterfactual test: generation failure. "
+                    "The model failed even when supplied with the gold context."
+                )
+            elif attribution.verdict == "PARAMETRIC_KNOWLEDGE":
+                failure_type = "hallucination"
+                root_cause = (
+                    "Confirmed by counterfactual test: context-ignoring model. "
+                    "The model answers from parametric memory rather than grounding in provided context."
+                )
+            else:
+                root_cause = attribution.reason
+        else:
+            root_cause = {
+                "poor_retrieval": "The retriever did not return the passage containing the answer, so the model could not have answered correctly regardless of its capability.",
+                "unsupported_claim": "The answer contains at least one claim that the retrieved context does not support.",
+                "hallucination": "The model produced specific content that is both absent from the context and inconsistent with the expected answer.",
+                "incorrect_answer": "The model answered confidently but disagreed with the expected answer.",
+                "missing_information": "The answer is directionally right but omits part of the expected answer.",
+                "low_relevance": "The response did not address the question that was asked.",
+                "empty_response": "The provider returned a successful response containing no text.",
+                "timeout": "The provider did not respond within the configured timeout.",
+                "provider_error": "The request failed at the provider before any answer was generated.",
+                "high_latency": "Answer quality was acceptable but the response exceeded the latency budget.",
+            }.get(failure_type, "The measured scores fell below the configured thresholds.")
 
         suggestions = []
         for template in REMEDIATIONS.get(failure_type, []):
@@ -438,16 +484,22 @@ class DiagnosisService:
 
         return {
             "failure_type": failure_type,
-            "failure_label": failure_type.replace("_", " ").title(),
+            "failure_label": (
+                f"{failure_type.replace('_', ' ').title()} (Confirmed by counterfactual)"
+                if confirmed_by_attribution
+                else failure_type.replace("_", " ").title()
+            ),
             "root_cause": root_cause,
-            "confidence": round(min(0.9, float(failure.confidence)), 2),
+            "confidence": round(min(0.95, float(attribution.confidence if confirmed_by_attribution else failure.confidence)), 2),
             "evidence": evidence[:8],
             "observed_scores": scores,
             "suggestions": suggestions,
             "expected_improvement": (
                 suggestions[0]["expected_improvement"] if suggestions else "No automatic remediation available."
             ),
-            "engine": "heuristic",
+            "engine": "counterfactual" if confirmed_by_attribution else "heuristic",
+            "attribution_confirmed": confirmed_by_attribution,
+            "attribution_verdict": attribution_verdict,
         }
 
     # -- LLM engine ---------------------------------------------------------

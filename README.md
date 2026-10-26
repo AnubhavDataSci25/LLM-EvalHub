@@ -23,6 +23,7 @@ Run one dataset against several providers at once, score the answers with determ
 - [The product loop, end to end](#the-product-loop-end-to-end)
 - [Metrics](#metrics)
 - [Failure taxonomy](#failure-taxonomy)
+- [Counterfactual failure attribution](#counterfactual-failure-attribution)
 - [Benchmark packs](#benchmark-packs)
 - [RAG pipeline](#rag-pipeline)
 - [API](#api)
@@ -225,6 +226,36 @@ The distinction between `poor_retrieval` and `hallucination` matters: the first 
 
 ---
 
+## Counterfactual failure attribution
+
+Observational metrics tell you that a test case failed; they do not prove *why*. A low retrieval score might coincide with an answer failure, but if the model still fails when provided with the reference passage, the true bottleneck is the model or prompt, not the retriever.
+
+Counterfactual Failure Attribution intervenes directly by re-running the failed work unit under controlled counterfactual conditions (preserving identical model, prompt template, temperature, and parameters) and comparing results against the stored `ORIGINAL`:
+
+1. **`ORIGINAL`**: The stored evaluation result. Never re-run.
+2. **`ORACLE_CONTEXT`**: The retrieved context is replaced with the case's reference gold context (`expected_sources` or `context`). Tests whether the model succeeds when retrieval is perfect.
+3. **`NO_CONTEXT`**: Context is completely removed. Tests whether the model answers strictly from parametric memory.
+4. **`DISTRACTOR_ONLY`** *(optional)*: Replaces retrieved context with distractor chunks excluding any overlap with the gold passage.
+
+### Attribution rules
+
+| Verdict | Condition Evidence | Root Cause & Actionable Recommendation |
+|---|---|---|
+| `RETRIEVAL_CAUSED` | `ORIGINAL` fails $\land$ `ORACLE_CONTEXT` passes | **Retrieval bottleneck.** The model produces correct answers when supporting passages are surfaced. Fix retrieval: increase `top_k`, enlarge chunk overlap, or add hybrid/reranking. |
+| `GENERATION_CAUSED` | `ORIGINAL` fails $\land$ `ORACLE_CONTEXT` fails $\land$ `NO_CONTEXT` fails | **Generation bottleneck.** The model failed even with gold context. Refine prompt instructions, system instructions, few-shot examples, or upgrade the model. |
+| `PARAMETRIC_KNOWLEDGE` | `ORIGINAL` fails $\land$ `ORACLE_CONTEXT` fails $\land$ `NO_CONTEXT` passes | **Context-ignoring behaviour.** The model answered correctly without context, but was distracted or misled when context was present. Strengthen grounding constraints (e.g. quote exact supporting text). |
+| `NOT_CONTEXT_DEPENDENT` | `ORIGINAL` passes $\land$ `NO_CONTEXT` passes | **Non-context-dependent.** The test case does not test RAG; the model answers from pre-training memory alone. Reported transparently so it is not mistaken for a RAG retrieval success. |
+| `NOT_ATTRIBUTABLE` | Missing gold context or provider error in counterfactual trials | **Not attributable.** Cannot establish causality without gold reference passages or clean trial execution. The reason is explicitly reported; results are never inferred or fabricated. |
+
+### Replication and quota safety
+
+- **Trial repeats ($N=1\dots 5$):** LLMs are stochastic. Single-run attribution ($N=1$) carries a noise warning. Running $N=3$ or $N=5$ repeats computes empirical pass rates across trials.
+- **Confidence cap:** Confidence scales with clean condition trials and is hard-capped at 0.95 (never claiming certainty).
+- **Free-tier quota protection:** Batch attribution supports a `dry_run=true` estimation of exact provider API calls ($2 \times N$ or $3 \times N$) and caps cases at 10 by default (50 maximum).
+- **Idempotent persistence:** Re-running attribution replaces previous `attribution_runs` and `attribution_conditions` records cleanly.
+
+---
+
 ## Benchmark packs
 
 Six packs ship with the repository, all synthetic and redistributable:
@@ -392,6 +423,7 @@ Stated plainly, because an evaluation tool that oversells itself is self-defeati
 - **Landis-Koch conventional boundaries.** Qualitative interpretation of kappa uses conventional Landis-Koch bands (<0 poor, 0–0.20 slight, 0.21–0.40 fair, 0.41–0.60 moderate, 0.61–0.80 substantial, 0.81–1.00 almost perfect). These bands are conventional heuristic boundaries, not universal ground truth.
 - **Statistical uncertainty assumptions.** The paired bootstrap confidence intervals and permutation tests assume that the test case set is representative of the production distribution.
 - **Small samples and power.** Deltas with insufficient paired test cases ($N < 8$ or where the required sample size for the observed effect size exceeds available cases) are flagged as underpowered. The underpowered label is an explicit warning that the test lacks statistical power to distinguish true effect from chance.
+- **Counterfactual failure attribution limitations.** Attribution relies on the presence of high-quality reference gold passages in test cases; without reference context, it safely yields `NOT_ATTRIBUTABLE` and defers to heuristic diagnosis. LLM outputs are stochastic; single trials ($N=1$) are subject to generation noise, so multi-trial repeats ($N=3\dots 5$) are recommended. Re-running conditions incurs extra provider calls ($2 \times N$ or $3 \times N$), which is why batch executions are quota-capped and offer dry-run call estimations. Attribution establishes causality on individual test cases, not cross-case generalizations.
 - **Recommendations are scoped.** They describe measured behaviour on your dataset under your weights. A different dataset can reorder the ranking, and the caveats say so on every recommendation. When top models have non-significant differences, a tied-candidate caveat is attached.
 - **The test provider is not a model.** It produces mechanical extractive output to exercise the pipeline offline.
 - **No authentication.** This is a single-tenant developer tool. Do not expose it to an untrusted network without adding an auth layer.

@@ -93,6 +93,10 @@ Column aliases are matched case-insensitively: `question`/`query`/`prompt`/`inpu
 | GET | `/failures` | Filter by run, type, severity, provider, model, diagnosed |
 | GET | `/failures/{id}` | Full evidence including the result |
 | POST | `/failures/{id}/diagnose` | AI diagnosis; `force` re-runs |
+| POST | `/failures/{id}/attribution` | Run empirical counterfactual attribution (repeats 1-5, optional distractor) |
+| GET | `/failures/{id}/attribution` | Retrieve stored counterfactual attribution run and condition trials |
+| POST | `/experiments/{id}/attribution` | Batch failure attribution with dry-run estimation, max_cases capping |
+| GET | `/experiments/{id}/attribution/summary` | Aggregate attribution distribution and bottleneck summary |
 | POST | `/recommendations` | Weighted ranking with constraints; flags statistically tied top models |
 | POST | `/reports` | Generate a frozen report |
 | GET | `/reports/{id}/export?format=json\|csv` | Export |
