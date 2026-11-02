@@ -112,10 +112,13 @@ export function Badge({ tone = 'neutral', children, className = '', icon: Icon }
 
 const STATUS_TONES = {
   completed: 'good',
+  succeeded: 'good',
   running: 'info',
   queued: 'neutral',
   failed: 'bad',
   error: 'bad',
+  interrupted: 'warn',
+  cancelled: 'neutral',
   indexed: 'good',
   uploaded: 'neutral',
   ready: 'good',

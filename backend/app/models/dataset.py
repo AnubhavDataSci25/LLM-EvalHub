@@ -2,17 +2,26 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import JSON, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, IDMixin, TimestampMixin
 
+if TYPE_CHECKING:
+    from app.models.auth import Workspace
+
 
 class Dataset(IDMixin, TimestampMixin, Base):
     __tablename__ = "datasets"
 
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        default="wks_default",
+        nullable=False,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(160), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text)
     domain: Mapped[str | None] = mapped_column(String(80), index=True)
@@ -21,6 +30,7 @@ class Dataset(IDMixin, TimestampMixin, Base):
     benchmark_pack_key: Mapped[str | None] = mapped_column(String(80), index=True)
     current_version: Mapped[int] = mapped_column(Integer, default=1)
 
+    workspace: Mapped[Workspace] = relationship("Workspace", back_populates="datasets")
     versions: Mapped[list[DatasetVersion]] = relationship(
         back_populates="dataset", cascade="all, delete-orphan", order_by="DatasetVersion.version"
     )
@@ -76,6 +86,12 @@ class Document(IDMixin, TimestampMixin, Base):
 
     __tablename__ = "documents"
 
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        default="wks_default",
+        nullable=False,
+        index=True,
+    )
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
     content_type: Mapped[str] = mapped_column(String(120), default="text/plain")
     byte_size: Mapped[int] = mapped_column(Integer, default=0)
@@ -85,6 +101,7 @@ class Document(IDMixin, TimestampMixin, Base):
     error: Mapped[str | None] = mapped_column(Text)
     config: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
+    workspace: Mapped[Workspace] = relationship("Workspace", back_populates="documents")
     chunks: Mapped[list[DocumentChunk]] = relationship(
         back_populates="document", cascade="all, delete-orphan"
     )

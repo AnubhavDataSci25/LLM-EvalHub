@@ -2,18 +2,24 @@
 import {
   Activity,
   AlertTriangle,
+  Building,
+  Check,
   CheckCircle2,
   Cpu,
   Info,
+  Key,
   Play,
+  Plus,
   RefreshCw,
   RotateCcw,
   Settings2,
   ShieldCheck,
+  Trash2,
+  Users,
   XCircle,
   Zap,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   Badge,
@@ -32,6 +38,7 @@ import {
   StatusBadge,
   useToast,
 } from '../components/ui'
+import { useAuth } from '../context/AuthContext'
 import { useApi } from '../hooks'
 import { api } from '../lib/api'
 import { NA, num, relativeTime, titleCase } from '../lib/format'
@@ -48,6 +55,86 @@ export default function Settings() {
   const [dryRunLoading, setDryRunLoading] = useState(false)
   const [dryRunEstimate, setDryRunEstimate] = useState(null)
   const [auditRunning, setAuditRunning] = useState(false)
+
+  const { currentWorkspace, role } = useAuth()
+  const isOwner = role === 'owner'
+  const [workspaceKeys, setWorkspaceKeys] = useState([])
+  const [workspaceMembers, setWorkspaceMembers] = useState([])
+  const [editingProvider, setEditingProvider] = useState(null)
+  const [newKeyInput, setNewKeyInput] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState('editor')
+  const [inviteLoading, setInviteLoading] = useState(false)
+
+  const fetchWorkspaceSettings = async () => {
+    if (!currentWorkspace?.id) return
+    try {
+      const [keys, members] = await Promise.all([
+        api.workspaceProviderKeys(currentWorkspace.id).catch(() => []),
+        api.workspaceMembers(currentWorkspace.id).catch(() => []),
+      ])
+      setWorkspaceKeys(keys)
+      setWorkspaceMembers(members)
+    } catch (err) {
+      console.warn('Failed to fetch workspace settings', err)
+    }
+  }
+
+  useEffect(() => {
+    fetchWorkspaceSettings()
+  }, [currentWorkspace?.id])
+
+  const handleSaveKey = async (provider) => {
+    if (!newKeyInput.trim()) return
+    try {
+      await api.setWorkspaceProviderKey(currentWorkspace.id, provider, { api_key: newKeyInput.trim() })
+      toast.success(`Key saved for ${provider}`)
+      setEditingProvider(null)
+      setNewKeyInput('')
+      fetchWorkspaceSettings()
+    } catch (err) {
+      toast.error(err.message || 'Failed to save key')
+    }
+  }
+
+  const handleDeleteKey = async (provider) => {
+    try {
+      await api.deleteWorkspaceProviderKey(currentWorkspace.id, provider)
+      toast.success(`Custom key removed for ${provider}`)
+      fetchWorkspaceSettings()
+    } catch (err) {
+      toast.error(err.message || 'Failed to remove key')
+    }
+  }
+
+  const handleInvite = async (e) => {
+    e.preventDefault()
+    if (!inviteEmail.trim()) return
+    setInviteLoading(true)
+    try {
+      await api.inviteWorkspaceMember(currentWorkspace.id, {
+        email: inviteEmail.trim(),
+        role: inviteRole,
+      })
+      toast.success(`Added ${inviteEmail} as ${inviteRole}`)
+      setInviteEmail('')
+      fetchWorkspaceSettings()
+    } catch (err) {
+      toast.error(err.message || 'Failed to add member')
+    } finally {
+      setInviteLoading(false)
+    }
+  }
+
+  const handleRemoveMember = async (userId) => {
+    try {
+      await api.removeWorkspaceMember(currentWorkspace.id, userId)
+      toast.success('Member removed')
+      fetchWorkspaceSettings()
+    } catch (err) {
+      toast.error(err.message || 'Failed to remove member')
+    }
+  }
 
   const { data, loading, error, refetch } = useApi(() => api.providers(true), [])
   const { data: health } = useApi(() => api.health(), [])
@@ -197,13 +284,163 @@ export default function Settings() {
       />
 
       <InlineNote tone="accent" icon={ShieldCheck}>
-        To configure a provider, set its variable in <span className="mono">backend/.env</span> and
-        restart the API. See <span className="mono">.env.example</span> for the full list. Keys are
-        redacted from application logs by a logging filter.
+        Provider credentials are encrypted at rest with Fernet. Workspace keys take precedence over backend environment defaults and are never returned in plaintext.
       </InlineNote>
 
-      {/* ----------------- Model Availability Section ----------------- */}
+      {/* ----------------- Workspace Provider Keys Section ----------------- */}
       <div className="mt-6 space-y-6">
+        <Reveal>
+          <Card className="p-5">
+            <SectionHeader
+              icon={Key}
+              title={`Workspace Provider Keys — ${currentWorkspace?.name || 'Current Workspace'}`}
+              description="Configure custom API keys for this workspace. Stored encrypted at rest with Fernet, masked on read, and fallback to server environment variables."
+            />
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {workspaceKeys.map((p) => (
+                <div
+                  key={p.provider}
+                  className="rounded-lg border border-line bg-surface/60 p-4 transition-colors hover:border-line-strong"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-sm">{p.display_name}</span>
+                    <Badge tone={p.is_configured ? (p.has_workspace_key ? 'accent' : 'good') : 'neutral'}>
+                      {p.has_workspace_key ? 'Workspace Key' : p.is_configured ? 'Environment' : 'Unconfigured'}
+                    </Badge>
+                  </div>
+                  <div className="text-xs text-muted">
+                    {p.masked_suffix ? (
+                      <span className="mono bg-overlay px-2 py-0.5 rounded text-[0.75rem]">
+                        Key: {p.masked_suffix}
+                      </span>
+                    ) : (
+                      <span>No custom workspace key set</span>
+                    )}
+                  </div>
+
+                  {isOwner ? (
+                    <div className="mt-3 pt-3 border-t border-line flex items-center justify-between gap-2">
+                      {editingProvider === p.provider ? (
+                        <div className="flex w-full items-center gap-1.5">
+                          <input
+                            type="password"
+                            placeholder="Paste API key..."
+                            value={newKeyInput}
+                            onChange={(e) => setNewKeyInput(e.target.value)}
+                            className="w-full rounded-md border border-line bg-base px-2 py-1 text-xs"
+                          />
+                          <button
+                            onClick={() => handleSaveKey(p.provider)}
+                            className="rounded-md bg-accent px-2 py-1 text-xs font-semibold text-accent-ink"
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingProvider(null)
+                              setNewKeyInput('')
+                            }}
+                            className="rounded-md border border-line px-2 py-1 text-xs text-muted"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditingProvider(p.provider)
+                              setNewKeyInput('')
+                            }}
+                            className="text-xs text-accent hover:underline font-medium"
+                          >
+                            {p.has_workspace_key ? 'Update Key' : 'Add Key'}
+                          </button>
+                          {p.has_workspace_key && (
+                            <button
+                              onClick={() => handleDeleteKey(p.provider)}
+                              className="text-xs text-rose-500 hover:underline"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[0.7rem] text-faint">Only workspace owners can modify keys.</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+        </Reveal>
+
+        {/* ----------------- Workspace Members Section ----------------- */}
+        <Reveal>
+          <Card className="p-5">
+            <SectionHeader
+              icon={Users}
+              title="Workspace Members"
+              description="Manage workspace collaborators and RBAC roles (Owner, Editor, Viewer)."
+            />
+
+            <div className="mt-4 space-y-3">
+              <div className="divide-y divide-line rounded-lg border border-line">
+                {workspaceMembers.map((m) => (
+                  <div key={m.id} className="flex items-center justify-between p-3 text-xs">
+                    <div>
+                      <p className="font-semibold text-ink">{m.full_name || m.email}</p>
+                      <p className="text-muted">{m.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge tone={m.role === 'owner' ? 'accent' : m.role === 'editor' ? 'good' : 'fair'}>
+                        {m.role}
+                      </Badge>
+                      {isOwner && m.role !== 'owner' && (
+                        <button
+                          onClick={() => handleRemoveMember(m.user_id)}
+                          className="text-rose-500 hover:text-rose-600 p-1"
+                          title="Remove member"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {isOwner && (
+                <form onSubmit={handleInvite} className="mt-4 flex flex-wrap items-center gap-2">
+                  <input
+                    type="email"
+                    required
+                    placeholder="Colleague email..."
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="rounded-lg border border-line bg-base px-3 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
+                  />
+                  <select
+                    value={inviteRole}
+                    onChange={(e) => setInviteRole(e.target.value)}
+                    className="rounded-lg border border-line bg-base px-2.5 py-1.5 text-xs text-ink focus:border-accent focus:outline-none"
+                  >
+                    <option value="editor">Editor</option>
+                    <option value="viewer">Viewer</option>
+                    <option value="owner">Owner</option>
+                  </select>
+                  <Button type="submit" variant="primary" loading={inviteLoading} icon={Plus}>
+                    Add Member
+                  </Button>
+                </form>
+              )}
+            </div>
+          </Card>
+        </Reveal>
+
+        {/* ----------------- Model Availability Section ----------------- */}
         <Reveal>
           <Card className="p-5">
             <SectionHeader

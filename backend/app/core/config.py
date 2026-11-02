@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -32,12 +33,31 @@ class Settings(BaseSettings):
     app_env: str = Field(default="development")
     app_debug: bool = Field(default=True)
     api_prefix: str = "/api"
-    secret_key: str = Field(default="dev-secret-change-me")
+    secret_key: str = Field(default="dev-insecure-secret-key-change-in-production")
+    encryption_key: str | None = None
     log_level: str = Field(default="INFO")
+    log_format: str = Field(default="text")  # text | json
+    enable_metrics: bool = Field(default=False)
+
+    # --- Authentication & Workspaces -------------------------------------
+    auth_mode: str = Field(default="local")  # local | enabled
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 15
+    refresh_token_expire_days: int = 7
+    password_min_length: int = 8
+    auth_rate_limit_requests: int = 5
+    auth_rate_limit_window_seconds: int = 60
+    redis_url: str | None = None
+
+    # --- Background Jobs & Limits ----------------------------------------
+    job_backend: str = Field(default="auto")  # auto | asyncio | arq
+    workspace_max_concurrent_jobs: int = Field(default=2)
+    workspace_daily_call_limit: int = Field(default=1000)
 
     # --- Persistence -----------------------------------------------------
     database_url: str = Field(default=f"sqlite:///{BACKEND_DIR / 'llm_evalhub.db'}")
     sql_echo: bool = False
+    auto_migrate: bool = Field(default=True)
 
     # --- CORS ------------------------------------------------------------
     cors_origins: str = Field(
@@ -105,6 +125,29 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.app_env in {"production", "prod"}
+
+    @property
+    def is_auth_enabled(self) -> bool:
+        return self.auth_mode == "enabled"
+
+    @property
+    def effective_job_backend(self) -> str:
+        if self.job_backend in {"asyncio", "arq"}:
+            return self.job_backend
+        return "arq" if self.redis_url else "asyncio"
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.auth_mode == "enabled":
+            insecure_defaults = {
+                "dev-secret-change-me",
+                "dev-insecure-secret-key-change-in-production",
+                "",
+            }
+            if not self.secret_key or self.secret_key in insecure_defaults:
+                raise ValueError(
+                    "SECRET_KEY must be set to a secure secret in 'enabled' auth mode. "
+                    "Refusing to start with missing or default secret."
+                )
 
     @property
     def uploads_dir(self) -> Path:

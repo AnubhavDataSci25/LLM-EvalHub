@@ -54,11 +54,13 @@ def is_provider_registered(key: str) -> bool:
     return key in _PROVIDER_CLASSES
 
 
-def get_provider(key: str) -> LLMProvider:
-    """Build a provider adapter. Credentials are read from settings at build time."""
+def get_provider(key: str, api_key: str | None = None) -> LLMProvider:
+    """Build a provider adapter. Credentials are read from settings or overridden by api_key."""
     cls = _PROVIDER_CLASSES.get(key)
     if cls is None:
         raise NotFoundError(f"Unknown provider '{key}'.")
+    if api_key is not None:
+        return cls(api_key=api_key)
     return cls()
 
 

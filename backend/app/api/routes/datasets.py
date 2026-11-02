@@ -7,7 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, File, Form, Query, UploadFile
 
-from app.api.deps import DbSession, PageParams
+from app.api.deps import CurrentWorkspaceContext, DbSession, PageParams
 from app.core.config import settings
 from app.core.exceptions import ValidationFailedError
 from app.schemas.benchmark import (
@@ -54,10 +54,16 @@ def _serialise(service: DatasetService, dataset) -> dict[str, Any]:
 def list_datasets(
     db: DbSession,
     page: PageParams,
+    ctx: CurrentWorkspaceContext,
     search: str | None = Query(None, description="Filter by name"),
 ) -> dict[str, Any]:
     service = DatasetService(db)
-    datasets, total = service.list(limit=page.limit, offset=page.offset, search=search)
+    datasets, total = service.list(
+        workspace_id=ctx.workspace.id,
+        limit=page.limit,
+        offset=page.offset,
+        search=search,
+    )
     return {
         "items": [DatasetRead(**_serialise(service, d)) for d in datasets],
         "total": total,
@@ -67,9 +73,14 @@ def list_datasets(
 
 
 @router.post("", response_model=DatasetDetail, status_code=201, summary="Create a dataset")
-def create_dataset(payload: DatasetCreate, db: DbSession) -> DatasetDetail:
+def create_dataset(
+    payload: DatasetCreate,
+    db: DbSession,
+    ctx: CurrentWorkspaceContext,
+) -> DatasetDetail:
+    ctx.require_role("editor")
     service = DatasetService(db)
-    dataset = service.create(payload)
+    dataset = service.create(payload, workspace_id=ctx.workspace.id)
     return _detail(service, dataset)
 
 
@@ -77,23 +88,49 @@ def create_dataset(payload: DatasetCreate, db: DbSession) -> DatasetDetail:
 def get_dataset(
     dataset_id: str,
     db: DbSession,
+    ctx: CurrentWorkspaceContext,
     version_id: str | None = Query(None),
     preview: int = Query(200, ge=1, le=2000, description="Max test cases returned"),
 ) -> DatasetDetail:
     service = DatasetService(db)
-    dataset = service.get(dataset_id)
+    dataset = service.get(dataset_id, workspace_id=ctx.workspace.id)
     return _detail(service, dataset, version_id=version_id, limit=preview)
 
 
 @router.put("/{dataset_id}", response_model=DatasetDetail, summary="Update dataset metadata")
-def update_dataset(dataset_id: str, payload: DatasetUpdate, db: DbSession) -> DatasetDetail:
+def update_dataset(
+    dataset_id: str,
+    payload: DatasetUpdate,
+    db: DbSession,
+    ctx: CurrentWorkspaceContext,
+) -> DatasetDetail:
+    ctx.require_role("editor")
     service = DatasetService(db)
+    service.get(dataset_id, workspace_id=ctx.workspace.id)
     return _detail(service, service.update(dataset_id, payload))
 
 
 @router.delete("/{dataset_id}", response_model=Acknowledgement, summary="Delete a dataset")
-def delete_dataset(dataset_id: str, db: DbSession) -> Acknowledgement:
-    DatasetService(db).delete(dataset_id)
+def delete_dataset(
+    dataset_id: str,
+    db: DbSession,
+    ctx: CurrentWorkspaceContext,
+) -> Acknowledgement:
+    ctx.require_role("editor")
+    service = DatasetService(db)
+    service.get(dataset_id, workspace_id=ctx.workspace.id)
+    service.delete(dataset_id)
+    from app.services.audit_log_service import AuditLogService
+    AuditLogService.log(
+        db,
+        workspace_id=ctx.workspace.id,
+        user_id=ctx.user.id if ctx.user else None,
+        actor_email=ctx.user.email if ctx.user else None,
+        action="dataset.delete",
+        resource_type="dataset",
+        resource_id=dataset_id,
+    )
+    db.commit()
     return Acknowledgement(message="Dataset deleted.", id=dataset_id)
 
 
@@ -130,7 +167,12 @@ def revalidate(dataset_id: str, db: DbSession, version_id: str | None = None) ->
 
 
 @router.post("/import", response_model=DatasetDetail, status_code=201, summary="Import from JSON")
-def import_json_dataset(payload: DatasetImportRequest, db: DbSession) -> DatasetDetail:
+def import_json_dataset(
+    payload: DatasetImportRequest,
+    db: DbSession,
+    ctx: CurrentWorkspaceContext,
+) -> DatasetDetail:
+    ctx.require_role("editor")
     cases, report = validate_rows(payload.rows)
     if not cases:
         raise ValidationFailedError(
@@ -145,6 +187,7 @@ def import_json_dataset(payload: DatasetImportRequest, db: DbSession) -> Dataset
             tags=payload.tags,
             test_cases=cases,
         ),
+        workspace_id=ctx.workspace.id,
         source="json",
         report=report,
     )
@@ -154,11 +197,13 @@ def import_json_dataset(payload: DatasetImportRequest, db: DbSession) -> Dataset
 @router.post("/upload", response_model=DatasetDetail, status_code=201, summary="Import a CSV or JSON file")
 async def upload_dataset(
     db: DbSession,
+    ctx: CurrentWorkspaceContext,
     file: UploadFile = File(..., description="CSV or JSON file"),
     name: str = Form(...),
     description: str | None = Form(None),
     domain: str | None = Form(None),
 ) -> DatasetDetail:
+    ctx.require_role("editor")
     content = await file.read()
     if len(content) > settings.max_upload_bytes:
         raise ValidationFailedError(
@@ -190,6 +235,7 @@ async def upload_dataset(
             tags=[],
             test_cases=cases,
         ),
+        workspace_id=ctx.workspace.id,
         source=source,
         report=report,
     )

@@ -296,12 +296,15 @@ class DatasetService:
         self.db = db
 
     # -- read ------------------------------------------------------------
-    def get(self, dataset_id: str) -> Dataset:
-        dataset = self.db.execute(
+    def get(self, dataset_id: str, workspace_id: str | None = None) -> Dataset:
+        stmt = (
             select(Dataset)
             .where(Dataset.id == dataset_id)
             .options(selectinload(Dataset.versions))
-        ).scalar_one_or_none()
+        )
+        if workspace_id:
+            stmt = stmt.where(Dataset.workspace_id == workspace_id)
+        dataset = self.db.execute(stmt).scalar_one_or_none()
         if dataset is None:
             raise NotFoundError(f"Dataset '{dataset_id}' was not found.")
         return dataset
@@ -312,22 +315,29 @@ class DatasetService:
             raise NotFoundError(f"Dataset version '{version_id}' was not found.")
         return version
 
-    def resolve_version(self, dataset_id: str, version_id: str | None = None) -> DatasetVersion:
+    def resolve_version(self, dataset_id: str, version_id: str | None = None, workspace_id: str | None = None) -> DatasetVersion:
         if version_id:
             version = self.get_version(version_id)
             if version.dataset_id != dataset_id:
                 raise ValidationFailedError("Dataset version does not belong to that dataset.")
             return version
-        dataset = self.get(dataset_id)
+        dataset = self.get(dataset_id, workspace_id=workspace_id)
         version = dataset.active_version
         if version is None:
             raise ValidationFailedError("Dataset has no versions.")
         return version
 
     def list(
-        self, *, limit: int = 50, offset: int = 0, search: str | None = None
+        self,
+        *,
+        workspace_id: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
+        search: str | None = None,
     ) -> tuple[list[Dataset], int]:
         stmt = select(Dataset).options(selectinload(Dataset.versions))
+        if workspace_id:
+            stmt = stmt.where(Dataset.workspace_id == workspace_id)
         if search:
             like = f"%{search.strip()}%"
             stmt = stmt.where(Dataset.name.ilike(like))
@@ -380,6 +390,7 @@ class DatasetService:
         self,
         payload: DatasetCreate,
         *,
+        workspace_id: str = "wks_default",
         source: str = "manual",
         benchmark_pack_key: str | None = None,
         report: DatasetValidationReport | None = None,
@@ -395,6 +406,7 @@ class DatasetService:
 
         dataset = Dataset(
             id=new_id("ds"),
+            workspace_id=workspace_id,
             name=payload.name.strip(),
             description=payload.description,
             domain=payload.domain,

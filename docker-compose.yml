@@ -15,16 +15,42 @@ services:
       timeout: 3s
       retries: 10
 
+  redis:
+    image: redis:7-alpine
+    ports: ['6379:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   api:
     build: ./backend
     environment:
       DATABASE_URL: postgresql+psycopg://evalhub:evalhub@db:5432/evalhub
+      REDIS_URL: redis://redis:6379/0
       CORS_ORIGINS: http://localhost:5173
       # Provider keys are read from a .env file that is never baked into the image.
     env_file: [./backend/.env]
     ports: ['8000:8000']
     depends_on:
       db: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes:
+      - ./benchmarks:/app/benchmarks:ro
+      - storage:/app/storage
+
+  worker:
+    build: ./backend
+    command: python -m app.worker
+    environment:
+      DATABASE_URL: postgresql+psycopg://evalhub:evalhub@db:5432/evalhub
+      REDIS_URL: redis://redis:6379/0
+      JOB_BACKEND: arq
+    env_file: [./backend/.env]
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_healthy }
     volumes:
       - ./benchmarks:/app/benchmarks:ro
       - storage:/app/storage

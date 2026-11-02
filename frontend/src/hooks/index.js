@@ -68,7 +68,12 @@ export function useRunPolling(runId, { enabled = true, onComplete } = {}) {
         if (cancelled) return
         setRun(payload)
         setLoading(false)
-        if (payload.status === 'completed' || payload.status === 'failed') {
+        if (
+          payload.status === 'completed' ||
+          payload.status === 'failed' ||
+          payload.status === 'interrupted' ||
+          payload.status === 'cancelled'
+        ) {
           if (!completedRef.current) {
             completedRef.current = true
             onComplete?.(payload)

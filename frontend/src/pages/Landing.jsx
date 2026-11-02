@@ -83,11 +83,14 @@ export default function Landing() {
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:px-6">
           <Logo />
           <nav className="ml-auto flex items-center gap-2">
+            <Link to="/documentation" className="btn-ghost hidden sm:inline-flex">
+              Documentation
+            </Link>
             <a
               href="/docs"
               target="_blank"
               rel="noreferrer"
-              className="btn-ghost hidden sm:inline-flex"
+              className="btn-ghost hidden md:inline-flex"
             >
               API docs
             </a>
@@ -242,7 +245,20 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-line px-4 py-8 text-center text-xs text-faint sm:px-6">
-        LLM-EvalHub · Built with FastAPI, LangChain, LangGraph, React and Recharts.
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4">
+          <span>LLM-EvalHub · Built with FastAPI, LangChain, LangGraph, React and Recharts.</span>
+          <div className="flex items-center gap-4">
+            <Link to="/documentation" className="text-muted hover:text-ink hover:underline">
+              Documentation
+            </Link>
+            <a href="/docs" target="_blank" rel="noreferrer" className="text-muted hover:text-ink hover:underline">
+              API Docs
+            </a>
+            <a href="/openapi.json" target="_blank" rel="noreferrer" className="text-muted hover:text-ink hover:underline">
+              OpenAPI JSON
+            </a>
+          </div>
+        </div>
       </footer>
     </div>
   )

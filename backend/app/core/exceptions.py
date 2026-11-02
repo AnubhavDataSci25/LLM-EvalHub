@@ -38,6 +38,9 @@ class ValidationFailedError(EvalHubError):
     code = "validation_failed"
 
 
+ValidationError = ValidationFailedError
+
+
 class ConflictError(EvalHubError):
     status_code = 409
     code = "conflict"
@@ -98,3 +101,18 @@ class RateLimitedError(ProviderError):
             retry_after=retry_after,
             status=429,
         )
+
+
+class AuthenticationError(EvalHubError):
+    status_code = 401
+    code = "authentication_failed"
+
+
+class ForbiddenError(EvalHubError):
+    status_code = 403
+    code = "forbidden"
+
+
+class RateLimitExceededError(EvalHubError):
+    status_code = 429
+    code = "rate_limit_exceeded"

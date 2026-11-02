@@ -69,12 +69,22 @@ A metric movement is counted as an improvement or regression only if it is stati
 **6. Judge scores carry measured reliability.**
 Every judge-scored metric is traceable to a measured reliability figure (Cohen's kappa) against blind human labels on the user's data. If fewer than 10 labelled cases exist, reliability is reported as `insufficient_labels` rather than fabricating agreement. When a judge is uncalibrated or displays poor agreement ($\kappa < 0.40$), recommendations and reports explicitly flag judge scores as weak evidence. Bias probes empirically test for order bias, verbosity inflation, and self-preference.
 
+**7. Cross-tenant queries return 404, never 403.**
+Every dataset, experiment, evaluation run, document, report, and diagnosis belongs to exactly one workspace. Attempting to query an entity from another workspace returns HTTP 404 (Not Found) rather than 403 (Forbidden). This zero-knowledge guarantee prevents attackers or unauthorized members from enumerating sensitive entity IDs.
+
+**8. Resumed evaluation runs never re-bill or duplicate work.**
+Background evaluation runs are backed by a durable `Job` state machine and unified `JobBackend` abstraction (`AsyncioJobBackend` for local development; `ArqJobBackend` with Redis for distributed deployments). If a process restarts or crashes, incomplete runs recover to `interrupted`. Resuming an evaluation run idempotently detects all existing completed work units and executes only unfinished units, avoiding duplicate LLM provider requests and double-billing. Cooperative cancellation halts execution between work units while preserving completed results.
+
 ---
 
 ## Feature overview
 
 | Area | What it does |
 |---|---|
+| **Workspaces & Auth** | Dual-mode authentication (`local` vs `enabled`), workspace tenant isolation, RBAC (`owner`, `editor`, `viewer`), Fernet-encrypted workspace provider keys |
+| **Durable background jobs** | Abstract job runner (`Asyncio` in-process or `Arq` + Redis), crash/restart orphan recovery to `interrupted`, mid-flight cancellation, idempotent resumption, workspace concurrency and daily call limits |
+| **Database migrations** | Alembic schema migrations with SQLite batch mode (`render_as_batch=True`), auto-migrate on boot (`AUTO_MIGRATE=true`), and zero-crash stamping for pre-existing databases |
+| **Security & Operations** | Security headers middleware, payload size enforcement (413), request ID tracing, multi-pattern credential/token/password log redaction, immutable audit trails (`/workspaces/{id}/audit-logs`), and Prometheus `/metrics` exposition |
 | **Datasets** | CSV/JSON import with flexible column mapping, validation with per-row errors and warnings, automatic versioning, inline editing |
 | **Providers** | Gemini, Groq, Hugging Face, NVIDIA NIM, OpenRouter, optional Ollama, plus a deterministic test provider — all behind one interface |
 | **Model audit** | Live model discovery, cheap 8-token verification probes, non-chat filtering, and availability caching so only models confirmed usable right now are surfaced |
@@ -88,6 +98,7 @@ Every judge-scored metric is traceable to a measured reliability figure (Cohen's
 | **AI diagnosis** | Heuristic and LLM engines returning the same schema, merged so every suggestion stays machine-applicable |
 | **Improvement loop** | Accept a suggestion → follow-up experiment created → re-run → before/after verdict |
 | **Recommendations** | Weighted ranking with score breakdown, hard constraints, evidence and caveats |
+| **In-app documentation** | Interactive `/documentation` with 3-column layout, client-side fuzzy search, copy-link headings, print styling, and verified Group A getting-started reference |
 | **Benchmark packs** | Six ready-made scenarios, installable in one click |
 | **Reports** | Frozen web reports with JSON and CSV export |
 
@@ -170,6 +181,18 @@ Copy `.env.example` to `backend/.env` and set whichever keys you have. Every pro
 | Ollama | `OLLAMA_ENABLED=true` | **Optional.** Local inference is never required |
 
 All base URLs are configurable, so a proxy or self-hosted endpoint can be substituted without code changes.
+
+### Authentication, workspaces and security
+
+LLM-EvalHub supports dual authentication modes:
+- **`AUTH_MODE=local` (Default):** Zero configuration. Automatically provisions a default user (`usr_default`) and workspace (`wks_default`). Bypasses the login screen, allowing single developers to test and evaluate immediately without accounts or bearer tokens.
+- **`AUTH_MODE=enabled`:** Production multi-tenant mode. Enforces user registration and login, password complexity validation (bcrypt salted rounds=12 with constant-time verification), short-lived JWT access tokens (15m), and rotating refresh tokens (7d) with replay detection. Refuses startup if a production `SECRET_KEY` is not provided.
+
+**Workspace Isolation & RBAC:**
+- Every dataset, document, experiment, evaluation run, diagnosis, recommendation, and report belongs to a `Workspace`.
+- Roles: `viewer` (read-only), `editor` (create/modify experiments and runs), and `owner` (manage workspace members and provider keys).
+- Invariant: cross-workspace ID lookups return `404` (Not Found) rather than `403` (Forbidden) to prevent resource existence enumeration.
+- **Encrypted Provider Keys:** Workspaces can optionally store their own provider API keys (overriding server environment variables) encrypted at rest using Fernet (`AES-128-CBC` with `HMAC-SHA256`). Plaintext keys are never returned to clients or logged.
 
 ---
 
@@ -365,13 +388,14 @@ llm-evalhub/
 │   │   ├── api/routes/        HTTP layer
 │   │   ├── core/              config, logging, exceptions, concurrency, text
 │   │   ├── db/                session, base, init
-│   │   ├── models/            SQLAlchemy models (16 tables)
+│   │   ├── models/            SQLAlchemy models (29 tables)
 │   │   ├── schemas/           Pydantic request/response models
 │   │   ├── providers/         one adapter per provider + registry
 │   │   ├── evaluation/        metrics, judge, detector, aggregators, RAGAS
 │   │   ├── rag/               ingestion, chunking, embeddings, retrieval
 │   │   ├── workflows/         LangGraph graph and state
 │   │   ├── services/          business logic
+│   │   ├── worker.py          standalone Arq background worker
 │   │   └── main.py
 │   └── tests/
 ├── frontend/
@@ -379,8 +403,10 @@ llm-evalhub/
 │       ├── components/ui/     design-system primitives
 │       ├── components/charts/ Recharts wrappers, theme-aware
 │       ├── components/layout/ app shell
+│       ├── components/docs/   documentation layout, search, blocks, diagrams
+│       ├── content/docs/      structured documentation sections & registry
 │       ├── hooks/             useApi, useRunPolling, useTheme
-│       ├── pages/             17 routes
+│       ├── pages/             18 routes (/documentation)
 │       └── lib/               API client, formatters
 ├── benchmarks/                six packs
 ├── docs/                      architecture, API, decisions
@@ -391,12 +417,33 @@ llm-evalhub/
 
 ## Deployment
 
-**Development:** SQLite with WAL, foreign keys enforced.
-**Production:** set `DATABASE_URL` to a PostgreSQL DSN — no code change; the session layer already handles both.
+**Development:** SQLite with WAL, foreign keys enforced, in-process `AsyncioJobBackend`.
+**Production:** set `DATABASE_URL` to a PostgreSQL DSN and `REDIS_URL` for `ArqJobBackend` — no code change; the session and job layers already handle both.
 
 ```bash
-docker compose up --build      # API on 8000, frontend on 5173, Postgres on 5432
+docker compose up --build      # API on 8000, frontend on 5173, Postgres on 5432, Redis on 6379, Worker
 ```
+
+For running standalone background workers manually:
+```bash
+python -m app.worker           # runs Arq worker when REDIS_URL is set, or asyncio queue fallback
+```
+
+### Database migrations (Alembic)
+
+Database schema versioning is managed with Alembic (`backend/alembic/`).
+
+- **Automatic Startup Migration:** By default, `AUTO_MIGRATE=true` automatically executes `alembic upgrade head` on startup in both local SQLite and production PostgreSQL.
+- **Manual Migration:**
+  ```bash
+  cd backend
+  alembic upgrade head
+  ```
+- **Existing Pre-Alembic Databases:** If you have an existing local database (`llm_evalhub.db` or `evalhub.db`) created before Alembic was introduced, `init_db()` automatically detects existing tables and stamps the revision to `head` (`alembic stamp head`) without failing. To stamp manually:
+  ```bash
+  cd backend
+  alembic stamp head
+  ```
 
 Build the frontend with `npm run build` and serve `dist/` from any static host, pointing `VITE_API_BASE_URL` at the API.
 
@@ -439,6 +486,12 @@ Stated plainly, because an evaluation tool that oversells itself is self-defeati
 - Zheng, L., Chiang, W.-L., Sheng, Y., et al. (2023). "Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena." *NeurIPS 2023*.
 - Wang, P., Li, L., Chen, L., et al. (2023). "Large Language Models are not Fair Evaluators." *arXiv:2305.17926*.
 - Panickssery, A., Bowman, S. R., & Shi, F. (2024). "LLM Evaluators Recognize and Favor Their Own Generations." *arXiv:2404.13076*.
+
+---
+
+## Contributing & Documentation Hygiene
+
+When you change a route, env var, metric or provider, update the matching documentation section (`frontend/src/content/docs/`) in the same change. Automated tests in `backend/tests/test_docs_integrity.py` and `npm run test:docs` enforce that documented environment variables and API routes stay synchronized with reality.
 
 ---
 

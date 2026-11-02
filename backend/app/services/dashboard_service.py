@@ -36,23 +36,29 @@ class DashboardService:
             stmt = stmt.where(getattr(model, field) == value)
         return int(self.db.execute(stmt).scalar_one())
 
-    def build(self) -> dict[str, Any]:
-        runs = list(
-            self.db.execute(
-                select(EvaluationRun).order_by(EvaluationRun.created_at.desc()).limit(50)
-            ).scalars().all()
-        )
+    def build(self, workspace_id: str | None = None) -> dict[str, Any]:
+        runs_query = select(EvaluationRun).order_by(EvaluationRun.created_at.desc())
+        if workspace_id:
+            runs_query = runs_query.where(EvaluationRun.workspace_id == workspace_id)
+        runs = list(self.db.execute(runs_query.limit(50)).scalars().all())
+
         completed = [r for r in runs if r.status == "completed"]
+
+        results_query = (
+            select(EvaluationResult)
+            .options(
+                selectinload(EvaluationResult.metrics),
+                selectinload(EvaluationResult.failure),
+            )
+            .order_by(EvaluationResult.created_at.desc())
+        )
+        if workspace_id:
+            results_query = results_query.join(
+                EvaluationRun, EvaluationResult.run_id == EvaluationRun.id
+            ).where(EvaluationRun.workspace_id == workspace_id)
+
         results = list(
-            self.db.execute(
-                select(EvaluationResult)
-                .options(
-                    selectinload(EvaluationResult.metrics),
-                    selectinload(EvaluationResult.failure),
-                )
-                .order_by(EvaluationResult.created_at.desc())
-                .limit(3000)
-            ).scalars().unique().all()
+            self.db.execute(results_query.limit(3000)).scalars().unique().all()
         )
 
         kpis = self._kpis(results, runs)

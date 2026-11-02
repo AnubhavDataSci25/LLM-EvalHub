@@ -191,4 +191,103 @@ A test sets a sentinel credential and asserts it appears nowhere in any API resp
 - **Initial Audit Latency.** Probing candidates across multiple providers requires an initial audit run (typically 2-4 seconds with bounded concurrency). This is mitigated by TTL caching (6 hours), on-demand single-model re-checking, and dry-run estimation.
 - **Provider Quota Consumption.** Free tiers must not be exhausted by verification. Configurable probe caps (`max_probes_per_provider=15`), auth-failure circuit-breaking, and quota-exhausted early stopping protect free tier allotments.
 
+---
+
+## ADR-015 — Multi-tenant workspace isolation and 404 existence-leak prevention
+
+**Decision.** Every resource (dataset, document, experiment, evaluation run, failure, diagnosis, recommendation, report) belongs to exactly one tenant `Workspace`. Tenant isolation is enforced across all queries and services using a reusable `WorkspaceContext` dependency. Cross-tenant resource queries return HTTP 404 (Not Found), never HTTP 403 (Forbidden).
+
+**Why.**
+1. **Tenant Separation.** Multi-tenant SaaS and enterprise deployments must strictly separate evaluation datasets, ground truths, test cases, and diagnostic reports between teams or organizations.
+2. **Preventing Resource Existence Leakage.** Returning HTTP 403 (Forbidden) on an ID lookup implicitly confirms that a sensitive dataset, experiment, or document exists. Returning HTTP 404 maintains zero-knowledge privacy: an unauthorized workspace cannot distinguish between a non-existent entity and an entity belonging to another tenant.
+3. **Reusable Context Layer.** Rather than sprinkling manual `where(workspace_id == ...)` filters across dozens of database queries, `WorkspaceContext` automatically resolves the user's active workspace (via `X-Workspace-Id` header, query parameter, or default membership), scopes queries, and provides `ctx.get_or_404(Model, id)`.
+
+**Trade-offs.**
+- **Debugging Complexity.** A developer attempting to query an entity across workspaces sees a 404 error rather than an explicit permission error. Clear audit logging and header inspection tools mitigate this.
+
+---
+
+## ADR-016 — Rotating hashed refresh tokens with replay detection
+
+**Decision.** Authentication uses email and password with bcrypt hashing (constant-time verification, salted rounds), short-lived JWT access tokens (15 minutes), and rotating refresh tokens (7 days) stored as SHA-256 hashes in the database. When a refresh token is used, it is rotated atomically. If an already-revoked refresh token is re-submitted, the system triggers replay detection and immediately revokes all active sessions for that user account.
+
+**Why.**
+1. **Compromised Token Containment.** Short-lived access tokens limit the window of vulnerability if a bearer token is leaked. Rotating refresh tokens ensures that each token is single-use.
+2. **Replay Attack Defense.** Token theft often manifests as an attacker attempting to use an already-used or revoked refresh token. By recording `replaced_by` hashes and triggering complete session revocation on duplicate usage, compromised sessions are automatically quarantined.
+3. **Constant-Time Verification.** Both password verification and user existence checks execute constant-time comparisons with dummy cryptographic pads, preventing username enumeration and timing side channels.
+4. **Sliding-Window Rate Limiting.** Login and registration endpoints are protected by an in-memory sliding-window rate limiter (with Redis fallback if `REDIS_URL` is set), returning HTTP 429 upon repeated failure.
+
+**Trade-offs.**
+- **Stateful Database Storage.** While access tokens are stateless JWTs, refresh tokens require database storage and rotation writes. Given the 15-minute token lifetime, database write load is minimal.
+
+---
+
+## ADR-017 — Dual auth mode and encrypted workspace provider keys
+
+**Decision.** The platform provides dual authentication modes (`AUTH_MODE=local|enabled`) and encrypted workspace-level provider API keys. In `local` mode (the default), a default workspace (`wks_default`) and default user (`usr_default`) are seeded automatically, completely bypassing the login wall and preserving zero-friction local developer workflows. In `enabled` mode, all routes (except health and auth) strictly require valid JWT bearer tokens, and a strong `SECRET_KEY` must be configured. Furthermore, provider API keys are stored encrypted at rest using Fernet (`AES-128-CBC` with `HMAC-SHA256`) and masked on read (`...1a2b`), taking precedence over environment variables.
+
+**Why.**
+1. **Developer Experience Preserved.** Local developers, unit tests, and CI/CD pipelines should not require user signups, passwords, or mock JWTs to run benchmarks. `local` mode preserves exact backward compatibility while `enabled` mode hardens production deployments.
+2. **Encrypted Provider Key Multi-Tenancy.** Different workspaces often have separate API keys and billing budgets for Groq, Gemini, OpenRouter, and NVIDIA NIM. Storing keys encrypted at rest ensures that database dumps or backups do not compromise third-party credentials.
+3. **Defense-in-Depth.** Workspace keys are never returned in plaintext in API responses, never rendered into frontend HTML/bundles, and never emitted in application logs. Server environment variables remain a seamless fallback.
+
+**Trade-offs.**
+- **Key Management.** Workspace key encryption relies on `ENCRYPTION_KEY`. Rotating this key requires re-encrypting stored provider keys.
+
+---
+
+## ADR-018 — Durable background job execution, restart recovery, and cancellation
+
+**Decision.** Background evaluation runs are backed by a durable `Job` entity and an execution backend abstraction (`JobBackend`) supporting dual modes:
+1. `AsyncioJobBackend`: In-process `asyncio.create_task` execution with memory tracking and zero external dependencies (default local developer mode).
+2. `ArqJobBackend`: Distributed queue worker backed by Redis and `arq` (activated when `REDIS_URL` is set), paired with a dedicated worker process (`python -m app.worker`).
+
+Runs persist lifecycle states (`queued`, `running`, `succeeded`, `failed`, `cancelled`, `interrupted`) in a `jobs` table. On system startup, any orphaned jobs left in `running` or `queued` state are safely recovered and marked `interrupted`. Users can resume an interrupted or failed run, which idempotently skips already-completed work units and avoids duplicate billing. Mid-flight cancellation is supported via cooperative cancellation flags checked between work units. Workspace-level concurrent job limits and daily call quotas protect provider rate limits.
+
+**Why.**
+1. **Crash & Restart Resilience.** In-memory background tasks vanish when a server restarts or crashes. Storing job state and progress in the database guarantees that work units already evaluated are never lost or re-billed to the LLM provider upon resumption.
+2. **Zero-Dependency Local Parity.** For local development and CI testing, requiring a Redis container introduces unnecessary friction. `AsyncioJobBackend` provides the exact same cancellation, persistence, and recovery semantics in-process on SQLite without extra services.
+3. **Cooperative Cancellation.** LLM evaluations take seconds to minutes across dozens of test cases. Cooperative cancellation allows users to halt wasteful runs immediately while guaranteeing that already completed work units remain validly committed.
+4. **Quota & Cost Guardrails.** Multi-tenant workspaces can easily exhaust upstream provider API keys. Enforcing per-workspace concurrent active job limits (`WORKSPACE_MAX_CONCURRENT_JOBS`) and daily call quotas (`WORKSPACE_DAILY_CALL_LIMIT`) prevents accidental exhaustion and provides immediate HTTP 429 feedback.
+
+**Trade-offs.**
+- **Polling vs Push.** Progress is still retrieved via client polling with exponential backoff rather than WebSockets or SSE. This keeps HTTP infrastructure simple and stateless behind load balancers.
+
+---
+
+## ADR-019 — Database schema migrations with Alembic and SQLite batch mode
+
+**Decision.** Database schema versioning is managed with Alembic migrations (`backend/alembic/`), replacing manual `create_all` calls. Migrations support both SQLite and PostgreSQL. SQLite migrations are configured with `render_as_batch=True` to enable non-destructive column/table alterations. Startup executes automatic migrations when `AUTO_MIGRATE=true` (the default for local mode). Existing pre-Alembic databases (databases where domain tables exist but `alembic_version` is absent) are automatically detected and stamped to migration `head`, avoiding duplicate table creation crashes.
+
+**Why.**
+1. **Schema Evolution Without Data Loss.** In early development, `Base.metadata.create_all()` was sufficient for creating tables on clean boots. However, as production features evolved (workspaces, RBAC, background jobs, encrypted keys), modifying existing databases required error-prone ad-hoc SQL patches. Alembic provides deterministic, auditable, reversible version control.
+2. **SQLite Batch Mode Support.** SQLite has limited native support for `ALTER TABLE` (e.g. inability to drop constraints or modify column types directly). Configuring `render_as_batch=True` instructs Alembic to create temporary tables, copy data, and rename tables transparently during migrations, ensuring full parity between local SQLite and production PostgreSQL.
+3. **Seamless Backward Compatibility for Existing Databases.** Existing developer databases may already contain benchmark packs, evaluations, and test cases created with `create_all`. Rather than forcing developers to discard their local databases, `init_db()` checks for existing domain tables and executes `alembic stamp head`, bringing the database into Alembic version tracking without crashing.
+4. **Configurable Startup Migration (`AUTO_MIGRATE`).** In local single-user mode, automatic startup migrations maintain the "zero extra steps" developer experience. In production or containerized environments (Kubernetes, Fly.io, Render), setting `AUTO_MIGRATE=false` allows platform engineers to run migrations via dedicated CI/CD jobs (`alembic upgrade head`) before application containers launch.
+
+**Trade-offs.**
+- **Migration Discipline.** Model additions now require running `alembic revision --autogenerate -m "..."`. Schema changes must be accompanied by migration files rather than relying solely on model annotations.
+
+---
+
+## ADR-020 — Hardened security headers, structured telemetry, audit trails, and Prometheus metrics
+
+**Decision.** Production operations and security hardening are implemented with defense-in-depth:
+1. **Security Headers & Payload Limits:** Standard HTTP middleware attaches `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `X-XSS-Protection: 1; mode=block`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`, and strict API route `Content-Security-Policy`. Requests exceeding `settings.max_upload_bytes` are rejected with HTTP 413.
+2. **Correlation & Redacting Logging:** Every request is tagged with an `X-Request-ID` and `X-Workspace-Id` propagated across asynchronous execution using Python contextvars. The logging subsystem scrubs API keys, Bearer tokens, and passwords/refresh tokens before emitting logs in human-readable or structured JSON formats (`LOG_FORMAT=text|json`).
+3. **Immutable Audit Trail:** An `audit_logs` table stores tenant-scoped records for sensitive actions (user logins, member invitations, role modifications, provider key changes, resource deletions). Access is restricted exclusively to workspace owners (`GET /workspaces/{id}/audit-logs`).
+4. **Readiness Probes & Prometheus Exposition:** `/ready` actively probes database and Redis connectivity, returning HTTP 503 if infrastructure is down. An optional Prometheus text exposition endpoint (`GET /metrics`, controlled by `ENABLE_METRICS`) tracks HTTP throughput, latency, job states, and provider error distributions without third-party dependencies.
+
+**Why.**
+1. **Compliance & Non-Repudiation.** Enterprise deployments require traceability for administrative operations (who added a key, who invited a user, who deleted an experiment). Audit logs provide verifiable evidence with IP address and user-agent context.
+2. **Telemetry Without Leaks.** Unsanitized logging frequently leaks Bearer tokens and passwords into cloud logging systems (Datadog, CloudWatch). Multi-pattern regex redaction ensures credentials never leave application memory.
+3. **Observability Without Dependencies.** A native, thread-safe Prometheus metrics collector enables Kubernetes Prometheus scrapers to monitor queue health and provider rate limit frequencies without requiring heavyweight external packages.
+
+**Trade-offs.**
+- **Log Parsing Overhead.** Regex redaction incurs a minor CPU cost on log emissions. Benchmarks demonstrate negligible latency impact (<0.1ms per request).
+
+
+
+
+
 

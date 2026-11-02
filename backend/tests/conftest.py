@@ -96,7 +96,7 @@ def wait_for_run(client: TestClient, run_id: str, timeout: float = 60.0) -> dict
     payload: dict = {}
     while time.time() < deadline:
         payload = client.get(f"/api/evaluations/{run_id}").json()
-        if payload["status"] in {"completed", "failed"}:
+        if payload["status"] in {"completed", "failed", "interrupted", "cancelled"}:
             return payload
         time.sleep(0.2)
     raise AssertionError(f"run {run_id} did not finish within {timeout}s")

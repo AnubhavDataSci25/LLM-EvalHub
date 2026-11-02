@@ -54,12 +54,15 @@ class ExperimentService:
         self.datasets = DatasetService(db)
 
     # -- read ------------------------------------------------------------
-    def get(self, experiment_id: str) -> Experiment:
-        experiment = self.db.execute(
+    def get(self, experiment_id: str, workspace_id: str | None = None) -> Experiment:
+        stmt = (
             select(Experiment)
             .where(Experiment.id == experiment_id)
             .options(selectinload(Experiment.models), selectinload(Experiment.runs))
-        ).scalar_one_or_none()
+        )
+        if workspace_id:
+            stmt = stmt.where(Experiment.workspace_id == workspace_id)
+        experiment = self.db.execute(stmt).scalar_one_or_none()
         if experiment is None:
             raise NotFoundError(f"Experiment '{experiment_id}' was not found.")
         return experiment
@@ -67,6 +70,7 @@ class ExperimentService:
     def list(
         self,
         *,
+        workspace_id: str | None = None,
         limit: int = 50,
         offset: int = 0,
         dataset_id: str | None = None,
@@ -75,6 +79,8 @@ class ExperimentService:
         stmt = select(Experiment).options(
             selectinload(Experiment.models), selectinload(Experiment.runs)
         )
+        if workspace_id:
+            stmt = stmt.where(Experiment.workspace_id == workspace_id)
         if dataset_id:
             stmt = stmt.where(Experiment.dataset_id == dataset_id)
         if search:
@@ -158,7 +164,7 @@ class ExperimentService:
         metrics = [m for m in metrics if m in METRIC_SPECS] or list(DEFAULT_METRICS)
         return metrics
 
-    def create(self, payload: ExperimentCreate) -> Experiment:
+    def create(self, payload: ExperimentCreate, workspace_id: str = "wks_default") -> Experiment:
         version = self.datasets.resolve_version(payload.dataset_id, payload.dataset_version_id)
         if self.datasets.count_cases(version.id) == 0:
             raise ValidationFailedError("The selected dataset version has no test cases.")
@@ -181,6 +187,7 @@ class ExperimentService:
 
         experiment = Experiment(
             id=new_id("exp"),
+            workspace_id=workspace_id,
             name=payload.name.strip(),
             description=payload.description,
             dataset_id=payload.dataset_id,

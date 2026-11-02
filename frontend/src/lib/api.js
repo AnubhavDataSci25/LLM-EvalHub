@@ -13,6 +13,22 @@ const client = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// Request interceptor: attach Authorization and Workspace header
+client.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('evalhub_access_token')
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    const workspaceId = localStorage.getItem('evalhub_active_workspace')
+    if (workspaceId) {
+      config.headers['X-Workspace-Id'] = workspaceId
+    }
+    return config
+  },
+  (error) => Promise.reject(error),
+)
+
 export class ApiError extends Error {
   constructor({ message, code, details, status }) {
     super(message)
@@ -32,9 +48,19 @@ export class ApiError extends Error {
   }
 }
 
+let isRefreshing = false
+let refreshSubscribers = []
+
+function onRefreshed(token) {
+  refreshSubscribers.forEach((cb) => cb(token))
+  refreshSubscribers = []
+}
+
 client.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
+    const originalRequest = error.config
+
     if (error.code === 'ECONNABORTED') {
       return Promise.reject(
         new ApiError({ message: 'The request timed out.', code: 'timeout', status: 408 }),
@@ -49,6 +75,57 @@ client.interceptors.response.use(
         }),
       )
     }
+
+    // Handle 401 token refresh (avoid infinite loops with _retry flag)
+    if (
+      error.response.status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/login') &&
+      !originalRequest.url?.includes('/auth/register') &&
+      !originalRequest.url?.includes('/auth/refresh')
+    ) {
+      const refreshToken = localStorage.getItem('evalhub_refresh_token')
+      if (refreshToken) {
+        if (!isRefreshing) {
+          isRefreshing = true
+          originalRequest._retry = true
+          try {
+            const { data } = await axios.post(
+              `${import.meta.env.VITE_API_BASE_URL || '/api'}/auth/refresh`,
+              { refresh_token: refreshToken },
+            )
+            localStorage.setItem('evalhub_access_token', data.access_token)
+            localStorage.setItem('evalhub_refresh_token', data.refresh_token)
+            isRefreshing = false
+            onRefreshed(data.access_token)
+            originalRequest.headers.Authorization = `Bearer ${data.access_token}`
+            return client(originalRequest)
+          } catch (refreshErr) {
+            isRefreshing = false
+            localStorage.removeItem('evalhub_access_token')
+            localStorage.removeItem('evalhub_refresh_token')
+            window.dispatchEvent(new Event('evalhub:logout'))
+            return Promise.reject(
+              new ApiError({
+                message: 'Session expired. Please log in again.',
+                code: 'session_expired',
+                status: 401,
+              }),
+            )
+          }
+        }
+
+        // Queue other pending requests while refresh is in flight
+        return new Promise((resolve) => {
+          refreshSubscribers.push((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`
+            resolve(client(originalRequest))
+          })
+        })
+      }
+    }
+
     const payload = error.response.data?.error
     return Promise.reject(
       new ApiError({
@@ -67,6 +144,28 @@ const put = (url, body) => client.put(url, body).then((r) => r.data)
 const del = (url) => client.delete(url).then((r) => r.data)
 
 export const api = {
+  // Auth
+  authMode: () => get('/auth/mode'),
+  register: (body) => post('/auth/register', body),
+  login: (body) => post('/auth/login', body),
+  refresh: (body) => post('/auth/refresh', body),
+  logout: (body) => post('/auth/logout', body),
+  me: () => get('/auth/me'),
+
+  // Workspaces
+  workspaces: () => get('/workspaces'),
+  createWorkspace: (body) => post('/workspaces', body),
+  workspace: (id) => get(`/workspaces/${id}`),
+  updateWorkspace: (id, body) => put(`/workspaces/${id}`, body),
+  deleteWorkspace: (id) => del(`/workspaces/${id}`),
+  workspaceMembers: (id) => get(`/workspaces/${id}/members`),
+  inviteWorkspaceMember: (id, body) => post(`/workspaces/${id}/members`, body),
+  updateWorkspaceMemberRole: (id, userId, body) => put(`/workspaces/${id}/members/${userId}`, body),
+  removeWorkspaceMember: (id, userId) => del(`/workspaces/${id}/members/${userId}`),
+  workspaceProviderKeys: (id) => get(`/workspaces/${id}/providers`),
+  setWorkspaceProviderKey: (id, provider, body) => put(`/workspaces/${id}/providers/${provider}`, body),
+  deleteWorkspaceProviderKey: (id, provider) => del(`/workspaces/${id}/providers/${provider}`),
+
   health: () => get('/health'),
   readyCheck: () => get('/ready'),
   metricCatalogue: () => get('/meta/metrics'),
@@ -118,7 +217,14 @@ export const api = {
   runResults: (id, params) => get(`/evaluations/${id}/results`, { params }),
   result: (id) => get(`/evaluations/results/${id}`),
   retryRun: (id) => post(`/evaluations/${id}/retry`, {}),
+  cancelRun: (id) => post(`/evaluations/${id}/cancel`, {}),
+  resumeRun: (id) => post(`/evaluations/${id}/resume`, {}),
   improvementSuggestions: (id) => get(`/evaluations/${id}/improvement-suggestions`),
+
+  jobs: (params) => get('/jobs', { params }),
+  job: (id) => get(`/jobs/${id}`),
+  cancelJob: (id) => post(`/jobs/${id}/cancel`, {}),
+  resumeJob: (id) => post(`/jobs/${id}/resume`, {}),
 
   compareRuns: (body) => post('/compare', body),
   compareModels: (runId) => get(`/compare/models/${runId}`),
@@ -163,6 +269,26 @@ export const api = {
   calibrationRuns: (params) => get('/calibration/runs', { params }),
   calibrationRun: (id) => get(`/calibration/runs/${id}`),
   judgeReliability: (params) => get('/calibration/reliability', { params }),
+
+  docUrls: () => getApiDocUrls(),
+}
+
+/**
+ * Returns URLs for live backend API documentation without hard-coding localhost.
+ */
+export function getApiDocUrls() {
+  const configured = import.meta.env.VITE_API_BASE_URL || '/api'
+  let origin = ''
+  if (/^https?:\/\//i.test(configured)) {
+    origin = configured.replace(/\/api\/?$/, '')
+  } else if (typeof window !== 'undefined' && window.location?.origin) {
+    origin = window.location.origin
+  }
+  return {
+    swagger: `${origin}/docs`,
+    redoc: `${origin}/redoc`,
+    openapi: `${origin}/openapi.json`,
+  }
 }
 
 export default api

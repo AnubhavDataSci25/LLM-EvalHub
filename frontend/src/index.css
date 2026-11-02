@@ -201,4 +201,27 @@
   .scroll-fade {
     mask-image: linear-gradient(to bottom, transparent, black 12px, black calc(100% - 12px), transparent);
   }
+
+  @media print {
+    body {
+      background: #ffffff !important;
+      color: #000000 !important;
+    }
+    body::before {
+      display: none !important;
+    }
+    header, aside, footer, nav, button, .print\:hidden {
+      display: none !important;
+    }
+    main {
+      padding: 0 !important;
+      margin: 0 !important;
+      max-width: 100% !important;
+    }
+    .card, .table-wrap {
+      border: 1px solid #e0e0e0 !important;
+      box-shadow: none !important;
+      break-inside: avoid;
+    }
+  }
 }

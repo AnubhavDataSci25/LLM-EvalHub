@@ -4,13 +4,16 @@ import {
   Activity,
   BarChart3,
   Beaker,
+  BookMarked,
   BookOpen,
+  Building,
   Database,
   FileText,
   FlaskConical,
   GitCompare,
   LayoutDashboard,
   Lightbulb,
+  LogOut,
   Menu,
   Moon,
   Play,
@@ -22,6 +25,7 @@ import {
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 
+import { useAuth } from '../../context/AuthContext'
 import { useApi, useTheme } from '../../hooks'
 import { api } from '../../lib/api'
 import { Badge } from '../ui'
@@ -143,7 +147,8 @@ function SidebarContent({ onNavigate, health }) {
           </div>
         ))}
       </nav>
-      <div className="border-t border-line px-3 py-3">
+      <div className="border-t border-line px-3 py-3 space-y-0.5">
+        <NavItem to="/documentation" label="Documentation" icon={BookMarked} onNavigate={onNavigate} />
         <NavItem to="/settings" label="Settings & providers" icon={Settings} onNavigate={onNavigate} />
         {health ? (
           <div className="mt-3 rounded-xl border border-line bg-overlay/45 px-3 py-2.5">
@@ -169,6 +174,15 @@ export default function AppLayout({ children }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const location = useLocation()
   const { data: health } = useApi(() => api.health(), [])
+  const {
+    user,
+    workspaces,
+    currentWorkspace,
+    setCurrentWorkspace,
+    role,
+    isAuthEnabled,
+    logout,
+  } = useAuth()
 
   useEffect(() => {
     setMobileOpen(false)
@@ -226,10 +240,61 @@ export default function AppLayout({ children }) {
             <div className="lg:hidden">
               <Logo compact />
             </div>
-            <p className="ml-auto hidden text-xs text-faint sm:block">
-              Evaluate → Compare → Diagnose → Recommend → Improve
-            </p>
-            <ThemeToggle />
+
+            {/* Workspace Selector & Active Role */}
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-overlay text-muted">
+                <Building className="h-3.5 w-3.5" />
+              </span>
+              {workspaces.length > 1 ? (
+                <select
+                  value={currentWorkspace?.id || ''}
+                  onChange={(e) => setCurrentWorkspace(e.target.value)}
+                  className="rounded-lg border border-line bg-elevated px-2 py-1 text-xs font-medium text-ink focus:border-accent focus:outline-none"
+                >
+                  {workspaces.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-xs font-semibold text-ink">
+                  {currentWorkspace?.name || 'Default Workspace'}
+                </span>
+              )}
+              <Badge tone={role === 'owner' ? 'accent' : role === 'editor' ? 'good' : 'fair'}>
+                {role}
+              </Badge>
+            </div>
+
+            {/* User Profile & Logout */}
+            <div className="ml-auto flex items-center gap-3">
+              <Link
+                to="/documentation"
+                className="flex h-8 items-center gap-1.5 rounded-lg border border-line bg-elevated px-2.5 text-xs text-muted transition hover:border-accent/40 hover:text-ink"
+                title="Documentation"
+              >
+                <BookMarked className="h-3.5 w-3.5 text-accent" />
+                <span className="hidden sm:inline">Docs</span>
+              </Link>
+              {isAuthEnabled && user ? (
+                <div className="flex items-center gap-2">
+                  <span className="hidden text-xs text-muted md:inline">
+                    {user.full_name || user.email}
+                  </span>
+                  <button
+                    onClick={logout}
+                    className="flex h-8 items-center gap-1.5 rounded-lg border border-line bg-elevated px-2.5 text-xs text-muted transition hover:border-accent/40 hover:text-ink"
+                    title="Sign Out"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">Logout</span>
+                  </button>
+                </div>
+              ) : null}
+              <ThemeToggle />
+            </div>
           </div>
         </header>
 
@@ -252,17 +317,22 @@ export default function AppLayout({ children }) {
         <footer className="border-t border-line px-4 py-5 text-xs text-faint sm:px-6 lg:px-8">
           <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3">
             <span>LLM-EvalHub — evaluation-first LLM &amp; RAG benchmarking.</span>
-            <span>
-              API keys stay server-side.{' '}
-              <a
-                href="/docs"
-                target="_blank"
-                rel="noreferrer"
-                className="text-accent underline-offset-2 hover:underline"
-              >
-                OpenAPI docs
-              </a>
-            </span>
+            <div className="flex items-center gap-4">
+              <Link to="/documentation" className="text-muted underline-offset-2 hover:underline hover:text-ink">
+                Documentation
+              </Link>
+              <span>
+                API keys stay server-side.{' '}
+                <a
+                  href="/docs"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent underline-offset-2 hover:underline"
+                >
+                  OpenAPI docs
+                </a>
+              </span>
+            </div>
           </div>
         </footer>
       </div>

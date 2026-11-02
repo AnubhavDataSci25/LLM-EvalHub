@@ -14,6 +14,23 @@ from app.schemas.audit import (
     ProviderAuditRequest,
     ProviderStatusSummary,
 )
+from app.schemas.audit_log import AuditLogListResponse, AuditLogRead
+from app.schemas.auth import (
+    RefreshTokenRequest,
+    TokenResponse,
+    UserLoginRequest,
+    UserRead,
+    UserRegisterRequest,
+    UserWithWorkspaces,
+    WorkspaceCreateRequest,
+    WorkspaceMemberInviteRequest,
+    WorkspaceMemberRead,
+    WorkspaceMemberUpdateRequest,
+    WorkspaceProviderKeySetRequest,
+    WorkspaceProviderStatusRead,
+    WorkspaceRead,
+    WorkspaceUpdateRequest,
+)
 from app.schemas.benchmark import (
     BenchmarkInstallRequest,
     BenchmarkPackDetail,
@@ -65,5 +82,6 @@ from app.schemas.experiment import (
     ReportRequest,
     RunEvaluationRequest,
 )
+from app.schemas.job import JobListResponse, JobRead
 
 __all__ = [n for n in dir() if not n.startswith("_")]

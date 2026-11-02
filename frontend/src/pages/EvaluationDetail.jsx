@@ -168,7 +168,11 @@ export default function EvaluationDetail() {
         : toast.error(payload.error || 'The run failed.', 'Evaluation failed'),
   })
 
-  const finished = run?.status === 'completed' || run?.status === 'failed'
+  const finished =
+    run?.status === 'completed' ||
+    run?.status === 'failed' ||
+    run?.status === 'interrupted' ||
+    run?.status === 'cancelled'
 
   const { data: comparison } = useApi(() => api.compareModels(id), [id, finished], { enabled: finished })
   const { data: results, refetch: refetchResults } = useApi(
@@ -202,6 +206,24 @@ export default function EvaluationDetail() {
     }
   }
 
+  const cancel = async () => {
+    try {
+      await api.cancelRun(id)
+      toast.info('Run cancellation requested.')
+    } catch (err) {
+      toast.error(err.message)
+    }
+  }
+
+  const resume = async () => {
+    try {
+      await api.resumeRun(id)
+      toast.success('Run resumed; resuming remaining units.')
+    } catch (err) {
+      toast.error(err.message)
+    }
+  }
+
   return (
     <>
       <Link to="/experiments" className="btn-ghost mb-4 -ml-2 px-2 text-sm">
@@ -215,6 +237,16 @@ export default function EvaluationDetail() {
         description={run.dataset_name ? `Dataset: ${run.dataset_name}` : undefined}
         actions={
           <>
+            {run.status === 'running' || run.status === 'queued' ? (
+              <Button variant="danger" icon={XCircle} onClick={cancel}>
+                Cancel run
+              </Button>
+            ) : null}
+            {run.status === 'interrupted' || run.status === 'cancelled' || (run.status === 'failed' && !summary.error_cases) ? (
+              <Button variant="primary" icon={RefreshCw} onClick={resume}>
+                Resume run
+              </Button>
+            ) : null}
             {summary.error_cases ? (
               <Button icon={RefreshCw} onClick={retry}>
                 Retry {summary.error_cases} errored

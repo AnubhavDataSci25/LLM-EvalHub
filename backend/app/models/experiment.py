@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from app.models.attribution import AttributionRun
+    from app.models.auth import Workspace
 
 from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -53,6 +54,12 @@ class Experiment(IDMixin, TimestampMixin, Base):
 
     __tablename__ = "experiments"
 
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        default="wks_default",
+        nullable=False,
+        index=True,
+    )
     name: Mapped[str] = mapped_column(String(180), nullable=False, index=True)
     description: Mapped[str | None] = mapped_column(Text)
     dataset_id: Mapped[str] = mapped_column(
@@ -93,6 +100,7 @@ class Experiment(IDMixin, TimestampMixin, Base):
     tags: Mapped[list[str]] = mapped_column(JSON, default=list)
     change_summary: Mapped[str | None] = mapped_column(Text)
 
+    workspace: Mapped[Workspace] = relationship("Workspace", back_populates="experiments")
     models: Mapped[list[ExperimentModel]] = relationship(
         back_populates="experiment", cascade="all, delete-orphan"
     )
@@ -124,6 +132,12 @@ class ExperimentModel(IDMixin, TimestampMixin, Base):
 class EvaluationRun(IDMixin, TimestampMixin, Base):
     __tablename__ = "evaluation_runs"
 
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        default="wks_default",
+        nullable=False,
+        index=True,
+    )
     experiment_id: Mapped[str] = mapped_column(
         ForeignKey("experiments.id", ondelete="CASCADE"), index=True, nullable=False
     )
@@ -140,6 +154,7 @@ class EvaluationRun(IDMixin, TimestampMixin, Base):
     summary: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     config_snapshot: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
+    workspace: Mapped[Workspace] = relationship("Workspace", back_populates="evaluation_runs")
     experiment: Mapped[Experiment] = relationship(back_populates="runs")
     results: Mapped[list[EvaluationResult]] = relationship(
         back_populates="run", cascade="all, delete-orphan"

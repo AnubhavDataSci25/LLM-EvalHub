@@ -6,7 +6,7 @@ from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, File, Form, Query, Response, UploadFile
 
-from app.api.deps import DbSession, PageParams
+from app.api.deps import CurrentWorkspaceContext, DbSession, PageParams
 from app.core.exceptions import ValidationFailedError
 from app.schemas.attribution import (
     AttributionRequest,
@@ -65,12 +65,17 @@ dashboard_router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 def list_experiments(
     db: DbSession,
     page: PageParams,
+    ctx: CurrentWorkspaceContext,
     dataset_id: str | None = Query(None),
     search: str | None = Query(None),
 ) -> dict[str, Any]:
     service = ExperimentService(db)
     experiments, total = service.list(
-        limit=page.limit, offset=page.offset, dataset_id=dataset_id, search=search
+        workspace_id=ctx.workspace.id,
+        limit=page.limit,
+        offset=page.offset,
+        dataset_id=dataset_id,
+        search=search,
     )
     return {
         "items": [ExperimentRead(**service.to_read_dict(e)) for e in experiments],
@@ -81,20 +86,47 @@ def list_experiments(
 
 
 @experiments_router.post("", response_model=ExperimentRead, status_code=201, summary="Create an experiment")
-def create_experiment(payload: ExperimentCreate, db: DbSession) -> ExperimentRead:
+def create_experiment(
+    payload: ExperimentCreate,
+    db: DbSession,
+    ctx: CurrentWorkspaceContext,
+) -> ExperimentRead:
+    ctx.require_role("editor")
     service = ExperimentService(db)
-    return ExperimentRead(**service.to_read_dict(service.create(payload)))
+    return ExperimentRead(**service.to_read_dict(service.create(payload, workspace_id=ctx.workspace.id)))
 
 
 @experiments_router.get("/{experiment_id}", response_model=ExperimentRead, summary="Get an experiment")
-def get_experiment(experiment_id: str, db: DbSession) -> ExperimentRead:
+def get_experiment(
+    experiment_id: str,
+    db: DbSession,
+    ctx: CurrentWorkspaceContext,
+) -> ExperimentRead:
     service = ExperimentService(db)
-    return ExperimentRead(**service.to_read_dict(service.get(experiment_id)))
+    return ExperimentRead(**service.to_read_dict(service.get(experiment_id, workspace_id=ctx.workspace.id)))
 
 
 @experiments_router.delete("/{experiment_id}", response_model=Acknowledgement, summary="Delete an experiment")
-def delete_experiment(experiment_id: str, db: DbSession) -> Acknowledgement:
-    ExperimentService(db).delete(experiment_id)
+def delete_experiment(
+    experiment_id: str,
+    db: DbSession,
+    ctx: CurrentWorkspaceContext,
+) -> Acknowledgement:
+    ctx.require_role("editor")
+    service = ExperimentService(db)
+    service.get(experiment_id, workspace_id=ctx.workspace.id)
+    service.delete(experiment_id)
+    from app.services.audit_log_service import AuditLogService
+    AuditLogService.log(
+        db,
+        workspace_id=ctx.workspace.id,
+        user_id=ctx.user.id if ctx.user else None,
+        actor_email=ctx.user.email if ctx.user else None,
+        action="experiment.delete",
+        resource_type="experiment",
+        resource_id=experiment_id,
+    )
+    db.commit()
     return Acknowledgement(message="Experiment deleted.", id=experiment_id)
 
 
@@ -167,10 +199,14 @@ def get_experiment_attribution_summary(
 # ---------------------------------------------------------------------------
 @evaluations_router.post("/run", response_model=EvaluationRunRead, status_code=202, summary="Start an evaluation run")
 def run_evaluation(
-    payload: RunEvaluationRequest, background: BackgroundTasks, db: DbSession
+    payload: RunEvaluationRequest,
+    background: BackgroundTasks,
+    db: DbSession,
+    ctx: CurrentWorkspaceContext,
 ) -> EvaluationRunRead:
+    ctx.require_role("editor")
     service = EvaluationService(db)
-    run = service.create_run(payload)
+    run = service.create_run(payload, workspace_id=ctx.workspace.id)
     payload_run_id = run.id
     enriched = service.enrich_run(run)
     db.commit()  # the background task opens its own session
@@ -182,12 +218,17 @@ def run_evaluation(
 def list_runs(
     db: DbSession,
     page: PageParams,
+    ctx: CurrentWorkspaceContext,
     experiment_id: str | None = Query(None),
     status: str | None = Query(None),
 ) -> dict[str, Any]:
     service = EvaluationService(db)
     runs, total = service.list_runs(
-        limit=page.limit, offset=page.offset, experiment_id=experiment_id, status=status
+        workspace_id=ctx.workspace.id,
+        limit=page.limit,
+        offset=page.offset,
+        experiment_id=experiment_id,
+        status=status,
     )
     return {
         "items": [EvaluationRunRead(**service.enrich_run(r)) for r in runs],
@@ -198,9 +239,18 @@ def list_runs(
 
 
 @evaluations_router.get("/{run_id}", response_model=EvaluationRunRead, summary="Get run status")
-def get_run(run_id: str, db: DbSession) -> EvaluationRunRead:
+def get_run(
+    run_id: str,
+    db: DbSession,
+    ctx: CurrentWorkspaceContext,
+) -> EvaluationRunRead:
     service = EvaluationService(db)
-    return EvaluationRunRead(**service.enrich_run(service.get_run(run_id)))
+    run = service.get_run(run_id)
+    if run.workspace_id != ctx.workspace.id:
+        from app.core.exceptions import NotFoundError
+
+        raise NotFoundError(f"Run '{run_id}' was not found.")
+    return EvaluationRunRead(**service.enrich_run(run))
 
 
 @evaluations_router.get("/{run_id}/results", summary="List run results")
@@ -258,12 +308,60 @@ def retry_run(run_id: str, background: BackgroundTasks, db: DbSession) -> Evalua
     if not case_ids:
         raise ValidationFailedError("This run has no errored cases to retry.")
     new_run = service.create_run(
-        RunEvaluationRequest(experiment_id=run.experiment_id, case_ids=case_ids)
+        RunEvaluationRequest(experiment_id=run.experiment_id, case_ids=case_ids),
+        workspace_id=run.workspace_id,
     )
     enriched = service.enrich_run(new_run)
     db.commit()
     background.add_task(execute_run, new_run.id)
     return EvaluationRunRead(**enriched)
+
+
+@evaluations_router.post("/{run_id}/cancel", response_model=EvaluationRunRead, summary="Cancel an evaluation run")
+def cancel_run(
+    run_id: str,
+    db: DbSession,
+    ctx: CurrentWorkspaceContext,
+) -> EvaluationRunRead:
+    ctx.require_role("editor")
+    service = EvaluationService(db)
+    run = service.get_run(run_id)
+    if run.workspace_id != ctx.workspace.id:
+        from app.core.exceptions import NotFoundError
+
+        raise NotFoundError(f"Run '{run_id}' was not found.")
+    cancelled_run = service.cancel_run(run_id)
+    from app.services.audit_log_service import AuditLogService
+    AuditLogService.log(
+        db,
+        workspace_id=ctx.workspace.id,
+        user_id=ctx.user.id if ctx.user else None,
+        actor_email=ctx.user.email if ctx.user else None,
+        action="evaluation.cancel",
+        resource_type="evaluation_run",
+        resource_id=run_id,
+    )
+    db.commit()
+    return EvaluationRunRead(**service.enrich_run(cancelled_run))
+
+
+@evaluations_router.post("/{run_id}/resume", response_model=EvaluationRunRead, status_code=202, summary="Resume an evaluation run")
+def resume_run(
+    run_id: str,
+    background: BackgroundTasks,
+    db: DbSession,
+    ctx: CurrentWorkspaceContext,
+) -> EvaluationRunRead:
+    ctx.require_role("editor")
+    service = EvaluationService(db)
+    run = service.get_run(run_id)
+    if run.workspace_id != ctx.workspace.id:
+        from app.core.exceptions import NotFoundError
+
+        raise NotFoundError(f"Run '{run_id}' was not found.")
+    resumed_run = service.resume_run(run_id)
+    background.add_task(execute_run, resumed_run.id)
+    return EvaluationRunRead(**service.enrich_run(resumed_run))
 
 
 @evaluations_router.get("/{run_id}/improvement-suggestions", summary="Aggregated suggestions from diagnoses")
@@ -515,8 +613,8 @@ def delete_document(document_id: str, db: DbSession) -> Acknowledgement:
 # dashboard
 # ---------------------------------------------------------------------------
 @dashboard_router.get("", response_model=DashboardResponse, summary="Dashboard aggregates")
-def dashboard(db: DbSession) -> DashboardResponse:
-    return DashboardResponse(**DashboardService(db).build())
+def dashboard(db: DbSession, ctx: CurrentWorkspaceContext) -> DashboardResponse:
+    return DashboardResponse(**DashboardService(db).build(workspace_id=ctx.workspace.id))
 
 
 # ---------------------------------------------------------------------------

@@ -40,12 +40,14 @@ from app.models.experiment import (
     Failure,
     MetricResult,
 )
-from app.providers.registry import get_provider
+from app.models.job import Job
 from app.rag.embeddings import get_embedder
 from app.rag.retriever import Retriever
 from app.schemas.experiment import RunEvaluationRequest
 from app.services.dataset_service import DatasetService
 from app.services.experiment_service import ExperimentService
+from app.services.jobs import JobService, get_job_backend
+from app.services.workspace_service import WorkspaceService
 from app.workflows.evaluation_graph import EvaluationGraph
 from app.workflows.state import EvaluationState
 
@@ -77,10 +79,12 @@ class EvaluationService:
         return run
 
     def list_runs(
-        self, *, limit: int = 50, offset: int = 0, experiment_id: str | None = None,
+        self, *, workspace_id: str | None = None, limit: int = 50, offset: int = 0, experiment_id: str | None = None,
         status: str | None = None,
     ) -> tuple[list[EvaluationRun], int]:
         stmt = select(EvaluationRun)
+        if workspace_id:
+            stmt = stmt.where(EvaluationRun.workspace_id == workspace_id)
         if experiment_id:
             stmt = stmt.where(EvaluationRun.experiment_id == experiment_id)
         if status:
@@ -144,11 +148,11 @@ class EvaluationService:
         }
 
     # -- creation ---------------------------------------------------------
-    def create_run(self, payload: RunEvaluationRequest) -> EvaluationRun:
+    def create_run(self, payload: RunEvaluationRequest, workspace_id: str = "wks_default") -> EvaluationRun:
         if payload.experiment_id:
-            experiment = self.experiments.get(payload.experiment_id)
+            experiment = self.experiments.get(payload.experiment_id, workspace_id=workspace_id)
         else:
-            experiment = self.experiments.create(payload.experiment)  # type: ignore[arg-type]
+            experiment = self.experiments.create(payload.experiment, workspace_id=workspace_id)  # type: ignore[arg-type]
 
         cases = self.datasets.test_cases(experiment.dataset_version_id)
         if payload.case_ids:
@@ -158,8 +162,14 @@ class EvaluationService:
             raise ValidationFailedError("No test cases selected for this run.")
 
         total_units = len(cases) * max(1, len(experiment.models))
+
+        # Check per-workspace concurrent and daily limits
+        job_service = JobService(self.db)
+        job_service.check_workspace_limits(workspace_id=experiment.workspace_id, incoming_units=total_units)
+
         run = EvaluationRun(
             id=new_id("run"),
+            workspace_id=experiment.workspace_id,
             experiment_id=experiment.id,
             status="queued",
             total_units=total_units,
@@ -169,7 +179,94 @@ class EvaluationService:
         )
         self.db.add(run)
         self.db.flush()
+
+        # Create persistent durable Job record
+        job_service.create_job(
+            workspace_id=experiment.workspace_id,
+            job_type="evaluation_run",
+            entity_id=run.id,
+            payload={"run_id": run.id},
+            total_units=total_units,
+            job_id=f"job_{run.id}",
+        )
+        self.db.flush()
         logger.info("queued run %s (%s units)", run.id, total_units)
+        return run
+
+    def cancel_run(self, run_id: str) -> EvaluationRun:
+        """Cancel an in-progress or queued evaluation run."""
+        run = self.get_run(run_id)
+        if run.status == "completed":
+            raise ValidationFailedError("Cannot cancel an already completed run.")
+        if run.status == "cancelled":
+            return run
+
+        run.status = "cancelled"
+        run.stage = "cancelled"
+        run.finished_at = _utcnow()
+
+        job_service = JobService(self.db)
+        job = job_service.get_job(f"job_{run.id}")
+        if job:
+            job.status = "cancelled"
+            job.completed_at = _utcnow()
+
+        self.db.flush()
+        self.db.commit()
+
+        # Signal cancellation to backend workers immediately
+        backend = get_job_backend()
+        backend.register_cancellation(f"job_{run.id}")
+        backend.register_cancellation(run.id)
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(backend.cancel_job(f"job_{run.id}"))
+            loop.create_task(backend.cancel_job(run.id))
+        except RuntimeError:
+            pass
+
+        return run
+
+    def resume_run(self, run_id: str) -> EvaluationRun:
+        """Resume an interrupted, failed, or cancelled evaluation run, skipping completed work units."""
+        run = self.get_run(run_id)
+        if run.status not in {"interrupted", "failed", "cancelled"}:
+            raise ValidationFailedError(
+                f"Only interrupted, failed, or cancelled runs can be resumed (current: '{run.status}')."
+            )
+
+        job_service = JobService(self.db)
+        remaining_units = max(1, run.total_units - run.completed_units)
+        job_service.check_workspace_limits(run.workspace_id, incoming_units=remaining_units)
+
+        run.status = "queued"
+        run.stage = "queued"
+        run.error = None
+
+        job = job_service.get_job(f"job_{run.id}")
+        if job:
+            job.status = "queued"
+            job.last_error = None
+        else:
+            job = job_service.create_job(
+                workspace_id=run.workspace_id,
+                job_type="evaluation_run",
+                entity_id=run.id,
+                payload={"run_id": run.id},
+                total_units=run.total_units,
+                job_id=f"job_{run.id}",
+            )
+
+        self.db.flush()
+        self.db.commit()
+
+        # Submit to background runner
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(get_job_backend().submit_job(f"job_{run.id}", "evaluation_run", {"run_id": run.id}))
+        except RuntimeError:
+            execute_run_sync(run.id)
+
         return run
 
     def _snapshot(
@@ -220,8 +317,10 @@ class EvaluationService:
 class EvaluationRunner:
     """Executes a queued run. Runs in a background task with its own session."""
 
-    def __init__(self, run_id: str) -> None:
+    def __init__(self, run_id: str, job_id: str | None = None) -> None:
         self.run_id = run_id
+        self.job_id = job_id or f"job_{run_id}"
+        self._db_lock = asyncio.Lock()
 
     async def execute(self) -> None:
         with session_scope() as db:
@@ -229,7 +328,7 @@ class EvaluationRunner:
             if run is None:
                 logger.error("run %s disappeared before execution", self.run_id)
                 return
-            if run.status not in {"queued", "failed"}:
+            if run.status not in {"queued", "failed", "interrupted", "cancelled"}:
                 logger.info("run %s already %s; skipping", run.id, run.status)
                 return
             experiment = db.get(Experiment, run.experiment_id)
@@ -239,22 +338,45 @@ class EvaluationRunner:
                 return
 
             run.status = "running"
-            run.started_at = _utcnow()
+            if not run.started_at:
+                run.started_at = _utcnow()
             run.stage = "starting"
+            run.error = None
+
+            job_service = JobService(db)
+            job = job_service.get_job(self.job_id)
+            if not job:
+                job = job_service.create_job(
+                    workspace_id=run.workspace_id,
+                    job_type="evaluation_run",
+                    entity_id=run.id,
+                    payload={"run_id": run.id},
+                    total_units=run.total_units,
+                    job_id=self.job_id,
+                )
+            job.status = "running"
+            job.started_at = job.started_at or _utcnow()
+            job.attempts += 1
+            job.last_error = None
+
             db.flush()
             db.commit()
 
             try:
-                await self._run_units(db, run, experiment)
+                await self._run_units(db, run, experiment, job)
             except Exception as exc:  # pragma: no cover - defensive
                 logger.exception("run %s failed", run.id)
                 run.status = "failed"
                 run.error = str(exc)[:1000]
                 run.finished_at = _utcnow()
+                if job:
+                    job.status = "failed"
+                    job.last_error = str(exc)[:1000]
+                    job.completed_at = _utcnow()
                 db.flush()
 
     async def _run_units(
-        self, db: Session, run: EvaluationRun, experiment: Experiment
+        self, db: Session, run: EvaluationRun, experiment: Experiment, job: Job | None = None
     ) -> None:
         service = EvaluationService(db)
         snapshot = run.config_snapshot or {}
@@ -266,10 +388,11 @@ class EvaluationRunner:
 
         warnings: list[str] = []
         providers: dict[str, Any] = {}
+        wks_service = WorkspaceService(db)
         for model in experiment.models:
             if model.provider in providers:
                 continue
-            provider = get_provider(model.provider)
+            provider = wks_service.get_effective_provider(experiment.workspace_id, model.provider)
             if not provider.is_configured:
                 warnings.append(
                     f"Provider '{model.provider}' is not configured; its results are recorded "
@@ -280,7 +403,7 @@ class EvaluationRunner:
         judge = None
         judge_config = None
         if experiment.judge_provider and experiment.judge_model and settings.enable_llm_judge:
-            judge_provider = get_provider(experiment.judge_provider)
+            judge_provider = wks_service.get_effective_provider(experiment.workspace_id, experiment.judge_provider)
             if judge_provider.is_configured:
                 judge_config = JudgeConfig(
                     provider=judge_provider, model=experiment.judge_model
@@ -312,27 +435,14 @@ class EvaluationRunner:
                 retriever_cache[key] = retriever
             return retriever_cache[key]
 
-        progress_state = {"done": 0}
-
-        async def persist(state: EvaluationState) -> None:
-            self._persist_result(db, run, state)
-            progress_state["done"] += 1
-            run.completed_units = progress_state["done"]
-            run.progress = round(progress_state["done"] / max(1, run.total_units), 4)
-            run.stage = "evaluating"
-            db.flush()
-            if progress_state["done"] % 5 == 0:
-                db.commit()  # progressive persistence for polling clients
-
-        graph = EvaluationGraph(
-            providers=providers,
-            evaluator=evaluator,
-            retriever_factory=retriever_factory if experiment.rag_enabled else None,
-            persist=persist,
-            weights=experiment.metric_weights,
-            latency_budget_ms=float(snapshot.get("latency_budget_ms", 4000.0)),
-            timeout_seconds=float(settings.request_timeout_seconds),
+        # Check existing results for restart/resume idempotency (never re-run completed units)
+        existing_results = list(
+            db.execute(
+                select(EvaluationResult.test_case_id, EvaluationResult.provider, EvaluationResult.model)
+                .where(EvaluationResult.run_id == run.id, EvaluationResult.status == "completed")
+            ).all()
         )
+        already_completed = {(r[0], r[1], r[2]) for r in existing_results}
 
         units: list[EvaluationState] = []
         for model in experiment.models:
@@ -362,7 +472,48 @@ class EvaluationRunner:
                     )
                 )
 
+        run.total_units = len(units)
+        run.completed_units = len(already_completed)
+        run.progress = round(len(already_completed) / max(1, len(units)), 4)
+        if job:
+            job.total_units = len(units)
+            job.completed_units = len(already_completed)
+            job.progress = run.progress
+
+        units_to_run = [
+            u for u in units if (u["test_case_id"], u["provider"], u["model"]) not in already_completed
+        ]
+        progress_state = {"done": len(already_completed)}
+
+        async def persist(state: EvaluationState) -> None:
+            async with self._db_lock:
+                self._persist_result(db, run, state)
+                progress_state["done"] += 1
+                run.completed_units = progress_state["done"]
+                run.progress = round(progress_state["done"] / max(1, run.total_units), 4)
+                run.stage = "evaluating"
+                if job:
+                    job.completed_units = progress_state["done"]
+                    job.progress = run.progress
+                db.flush()
+                if progress_state["done"] % 5 == 0:
+                    db.commit()  # progressive persistence for polling clients
+
+        graph = EvaluationGraph(
+            providers=providers,
+            evaluator=evaluator,
+            retriever_factory=retriever_factory if experiment.rag_enabled else None,
+            persist=persist,
+            weights=experiment.metric_weights,
+            latency_budget_ms=float(snapshot.get("latency_budget_ms", 4000.0)),
+            timeout_seconds=float(settings.request_timeout_seconds),
+        )
+
+        backend = get_job_backend()
+
         async def worker(unit: EvaluationState) -> None:
+            if backend.is_cancelled(self.job_id) or backend.is_cancelled(run.id):
+                return
             try:
                 await graph.run(unit)
             except Exception as exc:  # pragma: no cover - defensive
@@ -372,9 +523,24 @@ class EvaluationRunner:
                 unit["error_message"] = str(exc)[:500]
                 await persist(unit)
 
-        await run_bounded(units, worker, limit=settings.max_concurrent_requests)
+        if units_to_run:
+            await run_bounded(units_to_run, worker, limit=settings.max_concurrent_requests)
 
         db.flush()
+
+        # Check if cancelled during run execution
+        if backend.is_cancelled(self.job_id) or backend.is_cancelled(run.id) or run.status == "cancelled":
+            logger.info("run %s / job %s cancelled", run.id, self.job_id)
+            run.status = "cancelled"
+            run.stage = "cancelled"
+            run.finished_at = _utcnow()
+            if job:
+                job.status = "cancelled"
+                job.completed_at = _utcnow()
+            db.flush()
+            db.commit()
+            return
+
         results, _ = service.results(run.id)
         run.summary = self._build_summary(results, experiment)
         run.status = "completed"
@@ -382,6 +548,10 @@ class EvaluationRunner:
         run.progress = 1.0
         run.completed_units = len(results)
         run.finished_at = _utcnow()
+        if job:
+            job.status = "succeeded"
+            job.progress = 1.0
+            job.completed_at = _utcnow()
         started = _as_aware(run.started_at)
         finished = _as_aware(run.finished_at)
         if started and finished:
@@ -393,6 +563,7 @@ class EvaluationRunner:
                     collected.append(warning)
         run.warnings = collected[:20]
         db.flush()
+        db.commit()
         logger.info("run %s completed: %s results", run.id, len(results))
 
     # -- persistence ------------------------------------------------------
@@ -427,6 +598,9 @@ class EvaluationRunner:
                 "warnings": state.get("warnings") or [],
             },
         )
+        if state.get("error_kind"):
+            from app.core.metrics import metrics_collector
+            metrics_collector.record_provider_error(state["provider"], str(state["error_kind"]))
         db.add(result)
 
         for outcome in state.get("metric_outcomes") or []:

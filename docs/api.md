@@ -23,14 +23,51 @@ Base path `/api`. Interactive docs at `/docs`; schema at `/openapi.json`.
 
 **Long operations:** `POST /evaluations/run` returns `202` with a run id. Poll `GET /evaluations/{id}`; `progress` runs 0→1 and `status` reaches `completed` or `failed`.
 
+**Authentication & Multi-Tenancy:**
+- In `AUTH_MODE=enabled`, all endpoints except `/health`, `/ready`, `/auth/mode`, `/auth/register`, `/auth/login`, and `/auth/refresh` require an `Authorization: Bearer <access_token>` header.
+- Multi-tenant endpoints accept an optional `X-Workspace-Id` header (or `?workspace_id=...` parameter) to scope operations to a specific workspace. In `AUTH_MODE=local`, requests default to the pre-seeded `wks_default` workspace.
+- Cross-tenant resource queries return HTTP 404 (Not Found) rather than HTTP 403 (Forbidden) to prevent resource existence enumeration.
+
 ---
 
-## Metadata
+## Authentication
 
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/health` | Status, database kind, configured provider count, optional features |
-| GET | `/ready` | Readiness check; validates configured default evaluator (`DEFAULT_EVALUATOR_PROVIDER` / `DEFAULT_EVALUATOR_MODEL`) with availability warning and alternative suggestion |
+| GET | `/auth/mode` | Public. Returns `{mode: "local"\|"enabled", is_auth_enabled: bool}` |
+| POST | `/auth/register` | Rate-limited. Registers user with email, password (min 8 chars), full name |
+| POST | `/auth/login` | Rate-limited. Returns JWT access token (15m) and rotating refresh token (7d) |
+| POST | `/auth/refresh` | Rotates refresh token. Detects token replay and revokes compromised sessions |
+| POST | `/auth/logout` | Revokes the provided refresh token session |
+| GET | `/auth/me` | Current user profile, associated workspaces, and active workspace ID |
+
+## Workspaces & RBAC
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/workspaces` | List all workspaces where the current user has membership |
+| POST | `/workspaces` | Create a new workspace; creator is assigned `owner` role |
+| GET | `/workspaces/{id}` | Workspace detail and current user's role (requires `viewer`+) |
+| PUT | `/workspaces/{id}` | Update workspace name/description (requires `owner`) |
+| DELETE | `/workspaces/{id}` | Delete workspace and all scoped resources (requires `owner`) |
+| GET | `/workspaces/{id}/members` | List members and their assigned roles (requires `viewer`+) |
+| POST | `/workspaces/{id}/members` | Add/invite member by email with `owner`, `editor`, or `viewer` role (requires `owner`) |
+| PUT | `/workspaces/{id}/members/{user_id}` | Change member role (requires `owner`) |
+| DELETE | `/workspaces/{id}/members/{user_id}` | Remove member from workspace (requires `owner`) |
+| GET | `/workspaces/{id}/providers` | List provider key status (`configured`, masked suffix `...1a2b`, source) (requires `viewer`+) |
+| PUT | `/workspaces/{id}/providers/{provider}` | Store provider API key encrypted at rest with Fernet (requires `owner`) |
+| DELETE | `/workspaces/{id}/providers/{provider}` | Remove workspace-level encrypted provider key (requires `owner`) |
+| GET | `/workspaces/{id}/audit-logs` | List security audit logs with action/resource filters, pagination (requires `owner`) |
+
+---
+
+## Metadata & Operations
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/health` | Service liveness health check (available at `/health` and `/api/health`) |
+| GET | `/ready` | Readiness probe; tests database connectivity (`SELECT 1`), Redis connectivity (if configured), and default evaluator status. Returns HTTP 503 if infrastructure is unreachable (available at `/ready` and `/api/ready`) |
+| GET | `/metrics` | Prometheus text exposition format (controlled by `ENABLE_METRICS=true`; available at `/metrics` and `/api/metrics`) |
 | GET | `/meta/metrics` | Metric catalogue with `default_kind`, `requires`, `judge_capable` |
 | GET | `/meta/failure-types` | Taxonomy and default thresholds |
 | GET | `/meta/profiles` | Recommendation weighting profiles |
@@ -82,11 +119,22 @@ Column aliases are matched case-insensitively: `question`/`query`/`prompt`/`inpu
 | GET | `/experiments/{id}/outcome` | Before/after verdict |
 | POST | `/evaluations/run` | Start a run (202) |
 | GET | `/evaluations/{id}` | Poll status and summary |
+| POST | `/evaluations/{id}/cancel` | Cooperatively cancels an in-flight evaluation run |
+| POST | `/evaluations/{id}/resume` | Resumes an interrupted, cancelled, or failed run without re-billing completed units |
 | GET | `/evaluations/{id}/results` | Filter by `failed_only`, `model`, `provider`, `search` |
 | POST | `/evaluations/{id}/retry` | New run over errored cases only |
 | GET | `/evaluations/{id}/improvement-suggestions` | Aggregated, ranked by support |
 
 `POST /evaluations/run` accepts either `experiment_id` (re-run) or an inline `experiment` object (create and run).
+
+## Background jobs
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/jobs` | List background execution jobs for the active workspace (`status`, `job_type`, pagination) |
+| GET | `/jobs/{id}` | Job details, progress units, error logs, and timestamps |
+| POST | `/jobs/{id}/cancel` | Cancel an in-flight background job cooperatively |
+| POST | `/jobs/{id}/resume` | Resume an interrupted or failed background job |
 
 ## Comparison, failures, recommendations, reports
 

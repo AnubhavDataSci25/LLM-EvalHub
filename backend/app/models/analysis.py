@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import JSON, Float, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import JSON, Float, ForeignKey, String, Text
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, IDMixin, TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.auth import Workspace
 
 
 class Recommendation(IDMixin, TimestampMixin, Base):
@@ -15,6 +18,12 @@ class Recommendation(IDMixin, TimestampMixin, Base):
 
     __tablename__ = "recommendations"
 
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        default="wks_default",
+        nullable=False,
+        index=True,
+    )
     use_case: Mapped[str] = mapped_column(String(120), default="general")
     profile: Mapped[str] = mapped_column(String(40), default="balanced")
     scope: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
@@ -29,16 +38,26 @@ class Recommendation(IDMixin, TimestampMixin, Base):
     caveats: Mapped[list[str]] = mapped_column(JSON, default=list)
     sample_size: Mapped[int] = mapped_column(default=0)
 
+    workspace: Mapped[Workspace] = relationship("Workspace", back_populates="recommendations")
+
 
 class Report(IDMixin, TimestampMixin, Base):
     __tablename__ = "reports"
 
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"),
+        default="wks_default",
+        nullable=False,
+        index=True,
+    )
     title: Mapped[str] = mapped_column(String(200), nullable=False)
     run_id: Mapped[str | None] = mapped_column(String(48), index=True)
     experiment_id: Mapped[str | None] = mapped_column(String(48), index=True)
     baseline_run_id: Mapped[str | None] = mapped_column(String(48), index=True)
     kind: Mapped[str] = mapped_column(String(32), default="evaluation")
     content: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+    workspace: Mapped[Workspace] = relationship("Workspace", back_populates="reports")
 
 
 class ProviderConfigRecord(IDMixin, TimestampMixin, Base):
