@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.api.routes.arena_chess import arena_chess_router
 from app.api.routes.auth import auth_router
 from app.api.routes.calibration import calibration_router
 from app.api.routes.datasets import benchmark_router
@@ -38,3 +39,4 @@ api_router.include_router(reports_router)
 api_router.include_router(documents_router)
 api_router.include_router(providers_router)
 api_router.include_router(calibration_router)
+api_router.include_router(arena_chess_router)

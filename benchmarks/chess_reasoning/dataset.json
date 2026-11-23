@@ -1,0 +1,1277 @@
+{
+  "benchmark_pack": "chess_reasoning",
+  "description": "Tactical chess puzzle positions and rule-following challenges.",
+  "test_cases": [
+    {
+      "id": "chess-m1-01",
+      "question": "Given the chess position with FEN: 'r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4', what is the best legal move for White?",
+      "ground_truth": "Qxf7#",
+      "fen": "r1bqkb1r/pppp1ppp/2n5/4p3/2B1n3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 0 4",
+      "solution": "Qxf7#",
+      "solution_uci": "f3f7",
+      "solution_line": [
+        "Qxf7#"
+      ],
+      "category": "mateIn1",
+      "difficulty": "easy",
+      "rating": 1050,
+      "description": "Scholar's mate pattern on f7",
+      "turn": "white"
+    },
+    {
+      "id": "chess-m1-02",
+      "question": "Given the chess position with FEN: '6k1/5ppp/8/8/8/8/4QPPP/6K1 w - - 0 1', what is the best legal move for White?",
+      "ground_truth": "Qe8#",
+      "fen": "6k1/5ppp/8/8/8/8/4QPPP/6K1 w - - 0 1",
+      "solution": "Qe8#",
+      "solution_uci": "e2e8",
+      "solution_line": [
+        "Qe8#"
+      ],
+      "category": "mateIn1",
+      "difficulty": "easy",
+      "rating": 1000,
+      "description": "Back rank mate with Queen",
+      "turn": "white"
+    },
+    {
+      "id": "chess-m1-03",
+      "question": "Given the chess position with FEN: '6k1/5ppp/8/8/8/8/5PPP/1R4K1 w - - 0 1', what is the best legal move for White?",
+      "ground_truth": "Rb8#",
+      "fen": "6k1/5ppp/8/8/8/8/5PPP/1R4K1 w - - 0 1",
+      "solution": "Rb8#",
+      "solution_uci": "b1b8",
+      "solution_line": [
+        "Rb8#"
+      ],
+      "category": "mateIn1",
+      "difficulty": "easy",
+      "rating": 1000,
+      "description": "Back rank mate with Rook",
+      "turn": "white"
+    },
+    {
+      "id": "chess-m1-04",
+      "question": "Given the chess position with FEN: 'r1b2rk1/ppp2ppp/8/4q3/2B5/5Q2/PPP2PPP/2KR3R w - - 0 1', what is the best legal move for White?",
+      "ground_truth": "Qxf7+",
+      "fen": "r1b2rk1/ppp2ppp/8/4q3/2B5/5Q2/PPP2PPP/2KR3R w - - 0 1",
+      "solution": "Qxf7+",
+      "solution_uci": "f3f7",
+      "solution_line": [
+        "Qxf7+",
+        "Kh8",
+        "Qxf8#"
+      ],
+      "category": "mateIn2",
+      "difficulty": "medium",
+      "rating": 1450,
+      "description": "Sacrifice on f7 leading to back rank mate",
+      "turn": "white"
+    },
+    {
+      "id": "chess-m1-05",
+      "question": "Given the chess position with FEN: 'rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR b KQkq - 1 2', what is the best legal move for Black?",
+      "ground_truth": "Qxe1",
+      "fen": "rnb1kbnr/pppp1ppp/4p3/8/6Pq/5P2/PPPPP2P/RNBQKBNR b KQkq - 1 2",
+      "solution": "Qxe1",
+      "solution_uci": "h4e1",
+      "solution_line": [
+        "Qxe1"
+      ],
+      "category": "mateIn1",
+      "difficulty": "easy",
+      "rating": 1000,
+      "description": "Fool's mate variation",
+      "turn": "black"
+    },
+    {
+      "id": "chess-m1-06",
+      "question": "Given the chess position with FEN: 'r1b1k2r/pppp1ppp/8/4N3/1bB1n2q/8/PPPP1PPP/RNBQK2R w KQkq - 1 6', what is the best legal move for White?",
+      "ground_truth": "Bxf7+",
+      "fen": "r1b1k2r/pppp1ppp/8/4N3/1bB1n2q/8/PPPP1PPP/RNBQK2R w KQkq - 1 6",
+      "solution": "Bxf7+",
+      "solution_uci": "c4f7",
+      "solution_line": [
+        "Bxf7+",
+        "Ke7",
+        "O-O"
+      ],
+      "category": "fork",
+      "difficulty": "medium",
+      "rating": 1350,
+      "description": "Tactical bishop check winning tempo",
+      "turn": "white"
+    },
+    {
+      "id": "chess-m1-07",
+      "question": "Given the chess position with FEN: 'r4rk1/1pp2ppp/p1pb1n2/4p3/4P1b1/2NPBN2/PPP2PPP/R4RK1 b - - 2 10', what is the best legal move for Black?",
+      "ground_truth": "Bxf3",
+      "fen": "r4rk1/1pp2ppp/p1pb1n2/4p3/4P1b1/2NPBN2/PPP2PPP/R4RK1 b - - 2 10",
+      "solution": "Bxf3",
+      "solution_uci": "g4f3",
+      "solution_line": [
+        "Bxf3",
+        "gxf3",
+        "Nh5"
+      ],
+      "category": "pin",
+      "difficulty": "easy",
+      "rating": 1200,
+      "description": "Shattering kingside pawn structure",
+      "turn": "black"
+    },
+    {
+      "id": "chess-m1-08",
+      "question": "Given the chess position with FEN: 'r1bqk2r/ppppbppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 1 5', what is the best legal move for White?",
+      "ground_truth": "Ng5",
+      "fen": "r1bqk2r/ppppbppp/2n2n2/4p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 1 5",
+      "solution": "Ng5",
+      "solution_uci": "f3g5",
+      "solution_line": [
+        "Ng5",
+        "O-O",
+        "Nxf7"
+      ],
+      "category": "fork",
+      "difficulty": "medium",
+      "rating": 1400,
+      "description": "Targeting f7 vulnerability with Knight and Bishop",
+      "turn": "white"
+    },
+    {
+      "id": "chess-m1-09",
+      "question": "Given the chess position with FEN: 'r1bq1rk1/ppp2ppp/2n5/3np3/8/2BPPN2/PPP3PP/R2QKB1R w KQ - 0 9', what is the best legal move for White?",
+      "ground_truth": "Nxe5",
+      "fen": "r1bq1rk1/ppp2ppp/2n5/3np3/8/2BPPN2/PPP3PP/R2QKB1R w KQ - 0 9",
+      "solution": "Nxe5",
+      "solution_uci": "f3e5",
+      "solution_line": [
+        "Nxe5",
+        "Nxc3",
+        "Nxc6"
+      ],
+      "category": "fork",
+      "difficulty": "medium",
+      "rating": 1450,
+      "description": "Central tactical exchange",
+      "turn": "white"
+    },
+    {
+      "id": "chess-m1-10",
+      "question": "Given the chess position with FEN: 'r1b2rk1/pp3ppp/2n1p3/3q4/3P4/5N2/PP1Q1PPP/R3KB1R w KQ - 2 11', what is the best legal move for White?",
+      "ground_truth": "Be2",
+      "fen": "r1b2rk1/pp3ppp/2n1p3/3q4/3P4/5N2/PP1Q1PPP/R3KB1R w KQ - 2 11",
+      "solution": "Be2",
+      "solution_uci": "f1e2",
+      "solution_line": [
+        "Be2",
+        "b6",
+        "O-O"
+      ],
+      "category": "endgame",
+      "difficulty": "easy",
+      "rating": 1150,
+      "description": "Development preparing kingside safety",
+      "turn": "white"
+    },
+    {
+      "id": "chess-fk-01",
+      "question": "Given the chess position with FEN: 'r1b1k2r/pppp1ppp/2n5/4p3/2B1P2q/3P1N2/PPP2PPP/RNBQK2R b KQkq - 0 5', what is the best legal move for Black?",
+      "ground_truth": "Qg4",
+      "fen": "r1b1k2r/pppp1ppp/2n5/4p3/2B1P2q/3P1N2/PPP2PPP/RNBQK2R b KQkq - 0 5",
+      "solution": "Qg4",
+      "solution_uci": "h4g4",
+      "solution_line": [
+        "Qg4",
+        "O-O",
+        "Qxe4"
+      ],
+      "category": "fork",
+      "difficulty": "medium",
+      "rating": 1400,
+      "description": "Queen fork threatening g2 and e4",
+      "turn": "black"
+    },
+    {
+      "id": "chess-fk-02",
+      "question": "Given the chess position with FEN: 'r1bqkb1r/pppp1ppp/2n5/4P3/4n3/5N2/PPP1PPPP/RNBQKB1R w KQkq - 1 5', what is the best legal move for White?",
+      "ground_truth": "Qd5",
+      "fen": "r1bqkb1r/pppp1ppp/2n5/4P3/4n3/5N2/PPP1PPPP/RNBQKB1R w KQkq - 1 5",
+      "solution": "Qd5",
+      "solution_uci": "d1d5",
+      "solution_line": [
+        "Qd5",
+        "Nc5",
+        "Bg5"
+      ],
+      "category": "fork",
+      "difficulty": "medium",
+      "rating": 1500,
+      "description": "Queen central fork hitting knight and threatening mate setup",
+      "turn": "white"
+    },
+    {
+      "id": "chess-fk-03",
+      "question": "Given the chess position with FEN: '3r2k1/p4ppp/1p6/8/8/1P1N4/P1n2PPP/3R2K1 b - - 0 24', what is the best legal move for Black?",
+      "ground_truth": "Nb4",
+      "fen": "3r2k1/p4ppp/1p6/8/8/1P1N4/P1n2PPP/3R2K1 b - - 0 24",
+      "solution": "Nb4",
+      "solution_uci": "c2b4",
+      "solution_line": [
+        "Nb4",
+        "Nb2",
+        "Rxd1+",
+        "Nxd1"
+      ],
+      "category": "pin",
+      "difficulty": "medium",
+      "rating": 1550,
+      "description": "Exploiting absolute pin of knight to rook",
+      "turn": "black"
+    },
+    {
+      "id": "chess-fk-04",
+      "question": "Given the chess position with FEN: 'r2qkb1r/pp1npppp/2p2n2/8/3PN1b1/5N2/PPP1QPPP/R1B1KB1R w KQkq - 1 7', what is the best legal move for White?",
+      "ground_truth": "Nd6#",
+      "fen": "r2qkb1r/pp1npppp/2p2n2/8/3PN1b1/5N2/PPP1QPPP/R1B1KB1R w KQkq - 1 7",
+      "solution": "Nd6#",
+      "solution_uci": "e4d6",
+      "solution_line": [
+        "Nd6#"
+      ],
+      "category": "mateIn1",
+      "difficulty": "easy",
+      "rating": 1250,
+      "description": "Smothered mate with knight due to pinned e7 pawn",
+      "turn": "white"
+    },
+    {
+      "id": "chess-fk-05",
+      "question": "Given the chess position with FEN: 'r1b1k2r/ppp2ppp/2p5/8/4P3/3P4/PPP2qPP/RNBQ1B1K b kq - 0 10', what is the best legal move for Black?",
+      "ground_truth": "Bg4",
+      "fen": "r1b1k2r/ppp2ppp/2p5/8/4P3/3P4/PPP2qPP/RNBQ1B1K b kq - 0 10",
+      "solution": "Bg4",
+      "solution_uci": "c8g4",
+      "solution_line": [
+        "Bg4",
+        "Qd2",
+        "Qxf1#"
+      ],
+      "category": "pin",
+      "difficulty": "medium",
+      "rating": 1600,
+      "description": "Deflection of Queen from back rank defence",
+      "turn": "black"
+    },
+    {
+      "id": "chess-fk-06",
+      "question": "Given the chess position with FEN: 'r1b1kb1r/ppppqppp/5n2/4n3/4PB2/2N5/PPP2PPP/R2QKBNR w KQkq - 2 6', what is the best legal move for White?",
+      "ground_truth": "Nd5",
+      "fen": "r1b1kb1r/ppppqppp/5n2/4n3/4PB2/2N5/PPP2PPP/R2QKBNR w KQkq - 2 6",
+      "solution": "Nd5",
+      "solution_uci": "c3d5",
+      "solution_line": [
+        "Nd5",
+        "Nxd5",
+        "Qxd5"
+      ],
+      "category": "fork",
+      "difficulty": "medium",
+      "rating": 1420,
+      "description": "Central knight outpost attacking queen",
+      "turn": "white"
+    },
+    {
+      "id": "chess-fk-07",
+      "question": "Given the chess position with FEN: 'r1bq1rk1/pp2ppbp/2np1np1/8/2BNP3/2N1B3/PPP2PPP/R2Q1RK1 b - - 3 9', what is the best legal move for Black?",
+      "ground_truth": "Ng4",
+      "fen": "r1bq1rk1/pp2ppbp/2np1np1/8/2BNP3/2N1B3/PPP2PPP/R2Q1RK1 b - - 3 9",
+      "solution": "Ng4",
+      "solution_uci": "f6g4",
+      "solution_line": [
+        "Ng4",
+        "Nxc6",
+        "bxc6"
+      ],
+      "category": "fork",
+      "difficulty": "medium",
+      "rating": 1480,
+      "description": "Removing key bishop pair",
+      "turn": "black"
+    },
+    {
+      "id": "chess-fk-08",
+      "question": "Given the chess position with FEN: 'r2qk2r/ppp2ppp/2npbn2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQ1RK1 w kq - 1 7', what is the best legal move for White?",
+      "ground_truth": "Bxe6",
+      "fen": "r2qk2r/ppp2ppp/2npbn2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQ1RK1 w kq - 1 7",
+      "solution": "Bxe6",
+      "solution_uci": "c4e6",
+      "solution_line": [
+        "Bxe6",
+        "fxe6",
+        "b4"
+      ],
+      "category": "endgame",
+      "difficulty": "easy",
+      "rating": 1300,
+      "description": "Doubling enemy e-pawns",
+      "turn": "white"
+    },
+    {
+      "id": "chess-pin-01",
+      "question": "Given the chess position with FEN: 'r3k2r/ppp2ppp/2n5/3qp3/1b1P2b1/4PN2/PP1B1PPP/R2QKB1R w KQkq - 0 9', what is the best legal move for White?",
+      "ground_truth": "Bxb4",
+      "fen": "r3k2r/ppp2ppp/2n5/3qp3/1b1P2b1/4PN2/PP1B1PPP/R2QKB1R w KQkq - 0 9",
+      "solution": "Bxb4",
+      "solution_uci": "d2b4",
+      "solution_line": [
+        "Bxb4",
+        "Nxb4",
+        "Qa4+"
+      ],
+      "category": "fork",
+      "difficulty": "hard",
+      "rating": 1720,
+      "description": "Bishop exchange into winning double-check fork",
+      "turn": "white"
+    },
+    {
+      "id": "chess-pin-02",
+      "question": "Given the chess position with FEN: 'r1bqk2r/pp2bppp/2n1pn2/2pp4/3P4/2PBPN2/PP1N1PPP/R1BQK2R w KQkq - 3 7', what is the best legal move for White?",
+      "ground_truth": "O-O",
+      "fen": "r1bqk2r/pp2bppp/2n1pn2/2pp4/3P4/2PBPN2/PP1N1PPP/R1BQK2R w KQkq - 3 7",
+      "solution": "O-O",
+      "solution_uci": "e1g1",
+      "solution_line": [
+        "O-O",
+        "O-O",
+        "e4"
+      ],
+      "category": "endgame",
+      "difficulty": "easy",
+      "rating": 1100,
+      "description": "Solid king castling ensuring tactical base",
+      "turn": "white"
+    },
+    {
+      "id": "chess-pin-03",
+      "question": "Given the chess position with FEN: 'r1bqr1k1/pp3ppp/2n2n2/3p4/1b1P4/1BN2N2/PP3PPP/R1BQR1K1 w - - 4 12', what is the best legal move for White?",
+      "ground_truth": "Rxe8+",
+      "fen": "r1bqr1k1/pp3ppp/2n2n2/3p4/1b1P4/1BN2N2/PP3PPP/R1BQR1K1 w - - 4 12",
+      "solution": "Rxe8+",
+      "solution_uci": "e1e8",
+      "solution_line": [
+        "Rxe8+",
+        "Qxe8",
+        "Nxd5"
+      ],
+      "category": "discovery",
+      "difficulty": "medium",
+      "rating": 1650,
+      "description": "Rook simplification winning pawn on d5",
+      "turn": "white"
+    },
+    {
+      "id": "chess-pin-04",
+      "question": "Given the chess position with FEN: '2rqr1k1/pp3ppp/5n2/2bp4/3N4/1P1BP3/PB3PPP/R2Q1RK1 b - - 2 14', what is the best legal move for Black?",
+      "ground_truth": "Bxd4",
+      "fen": "2rqr1k1/pp3ppp/5n2/2bp4/3N4/1P1BP3/PB3PPP/R2Q1RK1 b - - 2 14",
+      "solution": "Bxd4",
+      "solution_uci": "c5d4",
+      "solution_line": [
+        "Bxd4",
+        "Bxd4",
+        "Ne4"
+      ],
+      "category": "endgame",
+      "difficulty": "medium",
+      "rating": 1500,
+      "description": "Eliminating strong knight outpost",
+      "turn": "black"
+    },
+    {
+      "id": "chess-pin-05",
+      "question": "Given the chess position with FEN: 'r1b2rk1/pp1nqppp/2p1pn2/3p4/2PP4/2NBPN2/PP3PPP/R1Q1K2R w KQ - 4 9', what is the best legal move for White?",
+      "ground_truth": "O-O",
+      "fen": "r1b2rk1/pp1nqppp/2p1pn2/3p4/2PP4/2NBPN2/PP3PPP/R1Q1K2R w KQ - 4 9",
+      "solution": "O-O",
+      "solution_uci": "e1g1",
+      "solution_line": [
+        "O-O",
+        "Re8",
+        "e4"
+      ],
+      "category": "endgame",
+      "difficulty": "easy",
+      "rating": 1150,
+      "description": "Completing kingside development",
+      "turn": "white"
+    },
+    {
+      "id": "chess-disc-01",
+      "question": "Given the chess position with FEN: 'r1b2rk1/pp1p1ppp/1qn2n2/2b1p1B1/4P3/2NB1N2/PPP2PPP/R2Q1RK1 w - - 6 9', what is the best legal move for White?",
+      "ground_truth": "Bxf6",
+      "fen": "r1b2rk1/pp1p1ppp/1qn2n2/2b1p1B1/4P3/2NB1N2/PPP2PPP/R2Q1RK1 w - - 6 9",
+      "solution": "Bxf6",
+      "solution_uci": "g5f6",
+      "solution_line": [
+        "Bxf6",
+        "gxf6",
+        "Nd5"
+      ],
+      "category": "discovery",
+      "difficulty": "hard",
+      "rating": 1850,
+      "description": "Destruction of f6 knight defender followed by knight fork on b6/f6",
+      "turn": "white"
+    },
+    {
+      "id": "chess-disc-02",
+      "question": "Given the chess position with FEN: 'r2q1rk1/1b2bppp/p1np1n2/1p2p3/4P3/1BN1BN2/PPP2PPP/R2Q1RK1 w - - 2 12', what is the best legal move for White?",
+      "ground_truth": "Nd5",
+      "fen": "r2q1rk1/1b2bppp/p1np1n2/1p2p3/4P3/1BN1BN2/PPP2PPP/R2Q1RK1 w - - 2 12",
+      "solution": "Nd5",
+      "solution_uci": "c3d5",
+      "solution_line": [
+        "Nd5",
+        "Nxd5",
+        "Bxd5"
+      ],
+      "category": "discovery",
+      "difficulty": "hard",
+      "rating": 1890,
+      "description": "Central knight placement paralyzing black minor pieces",
+      "turn": "white"
+    },
+    {
+      "id": "chess-disc-03",
+      "question": "Given the chess position with FEN: 'r1bq1rk1/pp2ppbp/3p1np1/2pP4/2P1P3/2N2N2/PP3PPP/R1BQ1RK1 w - - 0 10', what is the best legal move for White?",
+      "ground_truth": "h3",
+      "fen": "r1bq1rk1/pp2ppbp/3p1np1/2pP4/2P1P3/2N2N2/PP3PPP/R1BQ1RK1 w - - 0 10",
+      "solution": "h3",
+      "solution_uci": "h2h3",
+      "solution_line": [
+        "h3",
+        "a6",
+        "a4"
+      ],
+      "category": "endgame",
+      "difficulty": "easy",
+      "rating": 1280,
+      "description": "Prophylactic pawn move denying g4 square",
+      "turn": "white"
+    },
+    {
+      "id": "chess-disc-04",
+      "question": "Given the chess position with FEN: 'r1b1k2r/ppq1bppp/2n1pn2/2pp4/3P4/2PBPN2/PP1N1PPP/R1BQK2R w KQkq - 4 7', what is the best legal move for White?",
+      "ground_truth": "O-O",
+      "fen": "r1b1k2r/ppq1bppp/2n1pn2/2pp4/3P4/2PBPN2/PP1N1PPP/R1BQK2R w KQkq - 4 7",
+      "solution": "O-O",
+      "solution_uci": "e1g1",
+      "solution_line": [
+        "O-O",
+        "O-O",
+        "e4"
+      ],
+      "category": "endgame",
+      "difficulty": "easy",
+      "rating": 1120,
+      "description": "Standard castle prior to central break",
+      "turn": "white"
+    },
+    {
+      "id": "chess-end-01",
+      "question": "Given the chess position with FEN: '8/8/4k3/8/4K3/4P3/8/8 w - - 0 1', what is the best legal move for White?",
+      "ground_truth": "Kd4",
+      "fen": "8/8/4k3/8/4K3/4P3/8/8 w - - 0 1",
+      "solution": "Kd4",
+      "solution_uci": "e4d4",
+      "solution_line": [
+        "Kd4",
+        "Kd6",
+        "e4"
+      ],
+      "category": "endgame",
+      "difficulty": "hard",
+      "rating": 1950,
+      "description": "Opposition technique in King and Pawn endgame",
+      "turn": "white"
+    },
+    {
+      "id": "chess-end-02",
+      "question": "Given the chess position with FEN: '8/8/8/4k3/8/4K3/4P3/8 w - - 0 1', what is the best legal move for White?",
+      "ground_truth": "Kd3",
+      "fen": "8/8/8/4k3/8/4K3/4P3/8 w - - 0 1",
+      "solution": "Kd3",
+      "solution_uci": "e3d3",
+      "solution_line": [
+        "Kd3",
+        "Kd5",
+        "e3"
+      ],
+      "category": "endgame",
+      "difficulty": "hard",
+      "rating": 1920,
+      "description": "Retaining key opposition square",
+      "turn": "white"
+    },
+    {
+      "id": "chess-end-03",
+      "question": "Given the chess position with FEN: '8/5pk1/6p1/7p/7P/5KP1/5P2/8 b - - 0 1', what is the best legal move for Black?",
+      "ground_truth": "Kf6",
+      "fen": "8/5pk1/6p1/7p/7P/5KP1/5P2/8 b - - 0 1",
+      "solution": "Kf6",
+      "solution_uci": "g7f6",
+      "solution_line": [
+        "Kf6",
+        "Kf4",
+        "Ke6"
+      ],
+      "category": "endgame",
+      "difficulty": "medium",
+      "rating": 1650,
+      "description": "Active king defense in equal pawn ending",
+      "turn": "black"
+    },
+    {
+      "id": "chess-end-04",
+      "question": "Given the chess position with FEN: '8/8/p1k5/P7/2K5/8/8/8 w - - 0 1', what is the best legal move for White?",
+      "ground_truth": "Kb4",
+      "fen": "8/8/p1k5/P7/2K5/8/8/8 w - - 0 1",
+      "solution": "Kb4",
+      "solution_uci": "c4b4",
+      "solution_line": [
+        "Kb4",
+        "Kd5",
+        "Ka4"
+      ],
+      "category": "endgame",
+      "difficulty": "hard",
+      "rating": 1820,
+      "description": "Key square shoulder check against black king",
+      "turn": "white"
+    },
+    {
+      "id": "chess-end-05",
+      "question": "Given the chess position with FEN: '8/8/1p6/1P6/8/8/k1K5/8 w - - 0 1', what is the best legal move for White?",
+      "ground_truth": "Kc3",
+      "fen": "8/8/1p6/1P6/8/8/k1K5/8 w - - 0 1",
+      "solution": "Kc3",
+      "solution_uci": "c2c3",
+      "solution_line": [
+        "Kc3",
+        "Ka3",
+        "Kc4"
+      ],
+      "category": "endgame",
+      "difficulty": "expert",
+      "rating": 2100,
+      "description": "Stalemate avoidance maneuver in tight king ending",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-033",
+      "question": "Given the chess position with FEN: 'r1bqkbnr/1ppp1ppp/p1n5/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4', what is the best legal move for Black?",
+      "ground_truth": "Nf6",
+      "fen": "r1bqkbnr/1ppp1ppp/p1n5/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 1 4",
+      "solution": "Nf6",
+      "solution_uci": "g8f6",
+      "solution_line": [
+        "Nf6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1540,
+      "description": "Master opening continuation after Ba4",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-034",
+      "question": "Given the chess position with FEN: 'r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 5', what is the best legal move for White?",
+      "ground_truth": "O-O",
+      "fen": "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 5",
+      "solution": "O-O",
+      "solution_uci": "e1g1",
+      "solution_line": [
+        "O-O"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1580,
+      "description": "Master opening continuation after Nf6",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-035",
+      "question": "Given the chess position with FEN: 'r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 5', what is the best legal move for Black?",
+      "ground_truth": "Be7",
+      "fen": "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 b kq - 3 5",
+      "solution": "Be7",
+      "solution_uci": "f8e7",
+      "solution_line": [
+        "Be7"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1620,
+      "description": "Master opening continuation after O-O",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-036",
+      "question": "Given the chess position with FEN: 'r1bqk2r/1pppbppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 4 6', what is the best legal move for White?",
+      "ground_truth": "Re1",
+      "fen": "r1bqk2r/1pppbppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 4 6",
+      "solution": "Re1",
+      "solution_uci": "f1e1",
+      "solution_line": [
+        "Re1"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1660,
+      "description": "Master opening continuation after Be7",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-037",
+      "question": "Given the chess position with FEN: 'r1bqk2r/1pppbppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQR1K1 b kq - 5 6', what is the best legal move for Black?",
+      "ground_truth": "b5",
+      "fen": "r1bqk2r/1pppbppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQR1K1 b kq - 5 6",
+      "solution": "b5",
+      "solution_uci": "b7b5",
+      "solution_line": [
+        "b5"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1700,
+      "description": "Master opening continuation after Re1",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-038",
+      "question": "Given the chess position with FEN: 'r1bqk2r/2ppbppp/p1n2n2/1p2p3/B3P3/5N2/PPPP1PPP/RNBQR1K1 w kq - 0 7', what is the best legal move for White?",
+      "ground_truth": "Bb3",
+      "fen": "r1bqk2r/2ppbppp/p1n2n2/1p2p3/B3P3/5N2/PPPP1PPP/RNBQR1K1 w kq - 0 7",
+      "solution": "Bb3",
+      "solution_uci": "a4b3",
+      "solution_line": [
+        "Bb3"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1740,
+      "description": "Master opening continuation after b5",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-039",
+      "question": "Given the chess position with FEN: 'r1bqk2r/2ppbppp/p1n2n2/1p2p3/4P3/1B3N2/PPPP1PPP/RNBQR1K1 b kq - 1 7', what is the best legal move for Black?",
+      "ground_truth": "d6",
+      "fen": "r1bqk2r/2ppbppp/p1n2n2/1p2p3/4P3/1B3N2/PPPP1PPP/RNBQR1K1 b kq - 1 7",
+      "solution": "d6",
+      "solution_uci": "d7d6",
+      "solution_line": [
+        "d6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1780,
+      "description": "Master opening continuation after Bb3",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-040",
+      "question": "Given the chess position with FEN: 'r1bqk2r/2p1bppp/p1np1n2/1p2p3/4P3/1B3N2/PPPP1PPP/RNBQR1K1 w kq - 0 8', what is the best legal move for White?",
+      "ground_truth": "c3",
+      "fen": "r1bqk2r/2p1bppp/p1np1n2/1p2p3/4P3/1B3N2/PPPP1PPP/RNBQR1K1 w kq - 0 8",
+      "solution": "c3",
+      "solution_uci": "c2c3",
+      "solution_line": [
+        "c3"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1820,
+      "description": "Master opening continuation after d6",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-041",
+      "question": "Given the chess position with FEN: 'r1bqk2r/2p1bppp/p1np1n2/1p2p3/4P3/1BP2N2/PP1P1PPP/RNBQR1K1 b kq - 0 8', what is the best legal move for Black?",
+      "ground_truth": "O-O",
+      "fen": "r1bqk2r/2p1bppp/p1np1n2/1p2p3/4P3/1BP2N2/PP1P1PPP/RNBQR1K1 b kq - 0 8",
+      "solution": "O-O",
+      "solution_uci": "e8g8",
+      "solution_line": [
+        "O-O"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1860,
+      "description": "Master opening continuation after c3",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-042",
+      "question": "Given the chess position with FEN: 'rnbqkb1r/ppp2ppp/4pn2/3p2B1/2PP4/2N5/PP2PPPP/R2QKBNR b KQkq - 3 4', what is the best legal move for Black?",
+      "ground_truth": "Be7",
+      "fen": "rnbqkb1r/ppp2ppp/4pn2/3p2B1/2PP4/2N5/PP2PPPP/R2QKBNR b KQkq - 3 4",
+      "solution": "Be7",
+      "solution_uci": "f8e7",
+      "solution_line": [
+        "Be7"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1540,
+      "description": "Master opening continuation after Bg5",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-043",
+      "question": "Given the chess position with FEN: 'rnbqk2r/ppp1bppp/4pn2/3p2B1/2PP4/2N5/PP2PPPP/R2QKBNR w KQkq - 4 5', what is the best legal move for White?",
+      "ground_truth": "e3",
+      "fen": "rnbqk2r/ppp1bppp/4pn2/3p2B1/2PP4/2N5/PP2PPPP/R2QKBNR w KQkq - 4 5",
+      "solution": "e3",
+      "solution_uci": "e2e3",
+      "solution_line": [
+        "e3"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1580,
+      "description": "Master opening continuation after Be7",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-044",
+      "question": "Given the chess position with FEN: 'rnbqk2r/ppp1bppp/4pn2/3p2B1/2PP4/2N1P3/PP3PPP/R2QKBNR b KQkq - 0 5', what is the best legal move for Black?",
+      "ground_truth": "O-O",
+      "fen": "rnbqk2r/ppp1bppp/4pn2/3p2B1/2PP4/2N1P3/PP3PPP/R2QKBNR b KQkq - 0 5",
+      "solution": "O-O",
+      "solution_uci": "e8g8",
+      "solution_line": [
+        "O-O"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1620,
+      "description": "Master opening continuation after e3",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-045",
+      "question": "Given the chess position with FEN: 'rnbq1rk1/ppp1bppp/4pn2/3p2B1/2PP4/2N1P3/PP3PPP/R2QKBNR w KQ - 1 6', what is the best legal move for White?",
+      "ground_truth": "Nf3",
+      "fen": "rnbq1rk1/ppp1bppp/4pn2/3p2B1/2PP4/2N1P3/PP3PPP/R2QKBNR w KQ - 1 6",
+      "solution": "Nf3",
+      "solution_uci": "g1f3",
+      "solution_line": [
+        "Nf3"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1660,
+      "description": "Master opening continuation after O-O",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-046",
+      "question": "Given the chess position with FEN: 'rnbq1rk1/ppp1bppp/4pn2/3p2B1/2PP4/2N1PN2/PP3PPP/R2QKB1R b KQ - 2 6', what is the best legal move for Black?",
+      "ground_truth": "h6",
+      "fen": "rnbq1rk1/ppp1bppp/4pn2/3p2B1/2PP4/2N1PN2/PP3PPP/R2QKB1R b KQ - 2 6",
+      "solution": "h6",
+      "solution_uci": "h7h6",
+      "solution_line": [
+        "h6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1700,
+      "description": "Master opening continuation after Nf3",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-047",
+      "question": "Given the chess position with FEN: 'rnbq1rk1/ppp1bpp1/4pn1p/3p2B1/2PP4/2N1PN2/PP3PPP/R2QKB1R w KQ - 0 7', what is the best legal move for White?",
+      "ground_truth": "Bh4",
+      "fen": "rnbq1rk1/ppp1bpp1/4pn1p/3p2B1/2PP4/2N1PN2/PP3PPP/R2QKB1R w KQ - 0 7",
+      "solution": "Bh4",
+      "solution_uci": "g5h4",
+      "solution_line": [
+        "Bh4"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1740,
+      "description": "Master opening continuation after h6",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-048",
+      "question": "Given the chess position with FEN: 'rnbq1rk1/ppp1bpp1/4pn1p/3p4/2PP3B/2N1PN2/PP3PPP/R2QKB1R b KQ - 1 7', what is the best legal move for Black?",
+      "ground_truth": "b6",
+      "fen": "rnbq1rk1/ppp1bpp1/4pn1p/3p4/2PP3B/2N1PN2/PP3PPP/R2QKB1R b KQ - 1 7",
+      "solution": "b6",
+      "solution_uci": "b7b6",
+      "solution_line": [
+        "b6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1780,
+      "description": "Master opening continuation after Bh4",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-049",
+      "question": "Given the chess position with FEN: 'rnbqkbnr/pp2pppp/3p4/8/3NP3/8/PPP2PPP/RNBQKB1R b KQkq - 0 4', what is the best legal move for Black?",
+      "ground_truth": "Nf6",
+      "fen": "rnbqkbnr/pp2pppp/3p4/8/3NP3/8/PPP2PPP/RNBQKB1R b KQkq - 0 4",
+      "solution": "Nf6",
+      "solution_uci": "g8f6",
+      "solution_line": [
+        "Nf6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1540,
+      "description": "Master opening continuation after Nxd4",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-050",
+      "question": "Given the chess position with FEN: 'rnbqkb1r/pp2pppp/3p1n2/8/3NP3/8/PPP2PPP/RNBQKB1R w KQkq - 1 5', what is the best legal move for White?",
+      "ground_truth": "Nc3",
+      "fen": "rnbqkb1r/pp2pppp/3p1n2/8/3NP3/8/PPP2PPP/RNBQKB1R w KQkq - 1 5",
+      "solution": "Nc3",
+      "solution_uci": "b1c3",
+      "solution_line": [
+        "Nc3"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1580,
+      "description": "Master opening continuation after Nf6",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-051",
+      "question": "Given the chess position with FEN: 'rnbqkb1r/pp2pppp/3p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 2 5', what is the best legal move for Black?",
+      "ground_truth": "a6",
+      "fen": "rnbqkb1r/pp2pppp/3p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R b KQkq - 2 5",
+      "solution": "a6",
+      "solution_uci": "a7a6",
+      "solution_line": [
+        "a6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1620,
+      "description": "Master opening continuation after Nc3",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-052",
+      "question": "Given the chess position with FEN: 'rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6', what is the best legal move for White?",
+      "ground_truth": "Be3",
+      "fen": "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N5/PPP2PPP/R1BQKB1R w KQkq - 0 6",
+      "solution": "Be3",
+      "solution_uci": "c1e3",
+      "solution_line": [
+        "Be3"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1660,
+      "description": "Master opening continuation after a6",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-053",
+      "question": "Given the chess position with FEN: 'rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N1B3/PPP2PPP/R2QKB1R b KQkq - 1 6', what is the best legal move for Black?",
+      "ground_truth": "e5",
+      "fen": "rnbqkb1r/1p2pppp/p2p1n2/8/3NP3/2N1B3/PPP2PPP/R2QKB1R b KQkq - 1 6",
+      "solution": "e5",
+      "solution_uci": "e7e5",
+      "solution_line": [
+        "e5"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1700,
+      "description": "Master opening continuation after Be3",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-054",
+      "question": "Given the chess position with FEN: 'rnbqkb1r/1p3ppp/p2p1n2/4p3/3NP3/2N1B3/PPP2PPP/R2QKB1R w KQkq - 0 7', what is the best legal move for White?",
+      "ground_truth": "Nb3",
+      "fen": "rnbqkb1r/1p3ppp/p2p1n2/4p3/3NP3/2N1B3/PPP2PPP/R2QKB1R w KQkq - 0 7",
+      "solution": "Nb3",
+      "solution_uci": "d4b3",
+      "solution_line": [
+        "Nb3"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1740,
+      "description": "Master opening continuation after e5",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-055",
+      "question": "Given the chess position with FEN: 'rnbqkb1r/1p3ppp/p2p1n2/4p3/4P3/1NN1B3/PPP2PPP/R2QKB1R b KQkq - 1 7', what is the best legal move for Black?",
+      "ground_truth": "Be6",
+      "fen": "rnbqkb1r/1p3ppp/p2p1n2/4p3/4P3/1NN1B3/PPP2PPP/R2QKB1R b KQkq - 1 7",
+      "solution": "Be6",
+      "solution_uci": "c8e6",
+      "solution_line": [
+        "Be6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1780,
+      "description": "Master opening continuation after Nb3",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-056",
+      "question": "Given the chess position with FEN: 'rnbqkbnr/pp2pppp/2p5/8/3PN3/8/PPP2PPP/R1BQKBNR b KQkq - 0 4', what is the best legal move for Black?",
+      "ground_truth": "Bf5",
+      "fen": "rnbqkbnr/pp2pppp/2p5/8/3PN3/8/PPP2PPP/R1BQKBNR b KQkq - 0 4",
+      "solution": "Bf5",
+      "solution_uci": "c8f5",
+      "solution_line": [
+        "Bf5"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1540,
+      "description": "Master opening continuation after Nxe4",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-057",
+      "question": "Given the chess position with FEN: 'rn1qkbnr/pp2pppp/2p5/5b2/3PN3/8/PPP2PPP/R1BQKBNR w KQkq - 1 5', what is the best legal move for White?",
+      "ground_truth": "Ng3",
+      "fen": "rn1qkbnr/pp2pppp/2p5/5b2/3PN3/8/PPP2PPP/R1BQKBNR w KQkq - 1 5",
+      "solution": "Ng3",
+      "solution_uci": "e4g3",
+      "solution_line": [
+        "Ng3"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1580,
+      "description": "Master opening continuation after Bf5",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-058",
+      "question": "Given the chess position with FEN: 'rn1qkbnr/pp2pppp/2p5/5b2/3P4/6N1/PPP2PPP/R1BQKBNR b KQkq - 2 5', what is the best legal move for Black?",
+      "ground_truth": "Bg6",
+      "fen": "rn1qkbnr/pp2pppp/2p5/5b2/3P4/6N1/PPP2PPP/R1BQKBNR b KQkq - 2 5",
+      "solution": "Bg6",
+      "solution_uci": "f5g6",
+      "solution_line": [
+        "Bg6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1620,
+      "description": "Master opening continuation after Ng3",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-059",
+      "question": "Given the chess position with FEN: 'rn1qkbnr/pp2pppp/2p3b1/8/3P4/6N1/PPP2PPP/R1BQKBNR w KQkq - 3 6', what is the best legal move for White?",
+      "ground_truth": "h4",
+      "fen": "rn1qkbnr/pp2pppp/2p3b1/8/3P4/6N1/PPP2PPP/R1BQKBNR w KQkq - 3 6",
+      "solution": "h4",
+      "solution_uci": "h2h4",
+      "solution_line": [
+        "h4"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1660,
+      "description": "Master opening continuation after Bg6",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-060",
+      "question": "Given the chess position with FEN: 'rn1qkbnr/pp2pppp/2p3b1/8/3P3P/6N1/PPP2PP1/R1BQKBNR b KQkq - 0 6', what is the best legal move for Black?",
+      "ground_truth": "h6",
+      "fen": "rn1qkbnr/pp2pppp/2p3b1/8/3P3P/6N1/PPP2PP1/R1BQKBNR b KQkq - 0 6",
+      "solution": "h6",
+      "solution_uci": "h7h6",
+      "solution_line": [
+        "h6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1700,
+      "description": "Master opening continuation after h4",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-061",
+      "question": "Given the chess position with FEN: 'rn1qkbnr/pp2ppp1/2p3bp/8/3P3P/6N1/PPP2PP1/R1BQKBNR w KQkq - 0 7', what is the best legal move for White?",
+      "ground_truth": "Nf3",
+      "fen": "rn1qkbnr/pp2ppp1/2p3bp/8/3P3P/6N1/PPP2PP1/R1BQKBNR w KQkq - 0 7",
+      "solution": "Nf3",
+      "solution_uci": "g1f3",
+      "solution_line": [
+        "Nf3"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1740,
+      "description": "Master opening continuation after h6",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-062",
+      "question": "Given the chess position with FEN: 'rn1qkbnr/pp2ppp1/2p3bp/8/3P3P/5NN1/PPP2PP1/R1BQKB1R b KQkq - 1 7', what is the best legal move for Black?",
+      "ground_truth": "Nd7",
+      "fen": "rn1qkbnr/pp2ppp1/2p3bp/8/3P3P/5NN1/PPP2PP1/R1BQKB1R b KQkq - 1 7",
+      "solution": "Nd7",
+      "solution_uci": "b8d7",
+      "solution_line": [
+        "Nd7"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1780,
+      "description": "Master opening continuation after Nf3",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-063",
+      "question": "Given the chess position with FEN: 'rnbqk2r/ppppppbp/5np1/8/2PPP3/2N5/PP3PPP/R1BQKBNR b KQkq - 0 4', what is the best legal move for Black?",
+      "ground_truth": "d6",
+      "fen": "rnbqk2r/ppppppbp/5np1/8/2PPP3/2N5/PP3PPP/R1BQKBNR b KQkq - 0 4",
+      "solution": "d6",
+      "solution_uci": "d7d6",
+      "solution_line": [
+        "d6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1540,
+      "description": "Master opening continuation after e4",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-064",
+      "question": "Given the chess position with FEN: 'rnbqk2r/ppp1ppbp/3p1np1/8/2PPP3/2N5/PP3PPP/R1BQKBNR w KQkq - 0 5', what is the best legal move for White?",
+      "ground_truth": "Nf3",
+      "fen": "rnbqk2r/ppp1ppbp/3p1np1/8/2PPP3/2N5/PP3PPP/R1BQKBNR w KQkq - 0 5",
+      "solution": "Nf3",
+      "solution_uci": "g1f3",
+      "solution_line": [
+        "Nf3"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1580,
+      "description": "Master opening continuation after d6",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-065",
+      "question": "Given the chess position with FEN: 'rnbqk2r/ppp1ppbp/3p1np1/8/2PPP3/2N2N2/PP3PPP/R1BQKB1R b KQkq - 1 5', what is the best legal move for Black?",
+      "ground_truth": "O-O",
+      "fen": "rnbqk2r/ppp1ppbp/3p1np1/8/2PPP3/2N2N2/PP3PPP/R1BQKB1R b KQkq - 1 5",
+      "solution": "O-O",
+      "solution_uci": "e8g8",
+      "solution_line": [
+        "O-O"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1620,
+      "description": "Master opening continuation after Nf3",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-066",
+      "question": "Given the chess position with FEN: 'rnbq1rk1/ppp1ppbp/3p1np1/8/2PPP3/2N2N2/PP3PPP/R1BQKB1R w KQ - 2 6', what is the best legal move for White?",
+      "ground_truth": "Be2",
+      "fen": "rnbq1rk1/ppp1ppbp/3p1np1/8/2PPP3/2N2N2/PP3PPP/R1BQKB1R w KQ - 2 6",
+      "solution": "Be2",
+      "solution_uci": "f1e2",
+      "solution_line": [
+        "Be2"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1660,
+      "description": "Master opening continuation after O-O",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-067",
+      "question": "Given the chess position with FEN: 'rnbq1rk1/ppp1ppbp/3p1np1/8/2PPP3/2N2N2/PP2BPPP/R1BQK2R b KQ - 3 6', what is the best legal move for Black?",
+      "ground_truth": "e5",
+      "fen": "rnbq1rk1/ppp1ppbp/3p1np1/8/2PPP3/2N2N2/PP2BPPP/R1BQK2R b KQ - 3 6",
+      "solution": "e5",
+      "solution_uci": "e7e5",
+      "solution_line": [
+        "e5"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1700,
+      "description": "Master opening continuation after Be2",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-068",
+      "question": "Given the chess position with FEN: 'rnbq1rk1/ppp2pbp/3p1np1/4p3/2PPP3/2N2N2/PP2BPPP/R1BQK2R w KQ - 0 7', what is the best legal move for White?",
+      "ground_truth": "O-O",
+      "fen": "rnbq1rk1/ppp2pbp/3p1np1/4p3/2PPP3/2N2N2/PP2BPPP/R1BQK2R w KQ - 0 7",
+      "solution": "O-O",
+      "solution_uci": "e1g1",
+      "solution_line": [
+        "O-O"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1740,
+      "description": "Master opening continuation after e5",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-069",
+      "question": "Given the chess position with FEN: 'rnbq1rk1/ppp2pbp/3p1np1/4p3/2PPP3/2N2N2/PP2BPPP/R1BQ1RK1 b - - 1 7', what is the best legal move for Black?",
+      "ground_truth": "Nc6",
+      "fen": "rnbq1rk1/ppp2pbp/3p1np1/4p3/2PPP3/2N2N2/PP2BPPP/R1BQ1RK1 b - - 1 7",
+      "solution": "Nc6",
+      "solution_uci": "b8c6",
+      "solution_line": [
+        "Nc6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1780,
+      "description": "Master opening continuation after O-O",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-070",
+      "question": "Given the chess position with FEN: 'r1bqkb1r/pppp1ppp/2n2n2/4p3/2P5/2N2NP1/PP1PPP1P/R1BQKB1R b KQkq - 0 4', what is the best legal move for Black?",
+      "ground_truth": "d5",
+      "fen": "r1bqkb1r/pppp1ppp/2n2n2/4p3/2P5/2N2NP1/PP1PPP1P/R1BQKB1R b KQkq - 0 4",
+      "solution": "d5",
+      "solution_uci": "d7d5",
+      "solution_line": [
+        "d5"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1540,
+      "description": "Master opening continuation after g3",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-071",
+      "question": "Given the chess position with FEN: 'r1bqkb1r/ppp2ppp/2n2n2/3pp3/2P5/2N2NP1/PP1PPP1P/R1BQKB1R w KQkq - 0 5', what is the best legal move for White?",
+      "ground_truth": "cxd5",
+      "fen": "r1bqkb1r/ppp2ppp/2n2n2/3pp3/2P5/2N2NP1/PP1PPP1P/R1BQKB1R w KQkq - 0 5",
+      "solution": "cxd5",
+      "solution_uci": "c4d5",
+      "solution_line": [
+        "cxd5"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1580,
+      "description": "Master opening continuation after d5",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-072",
+      "question": "Given the chess position with FEN: 'r1bqkb1r/ppp2ppp/2n2n2/3Pp3/8/2N2NP1/PP1PPP1P/R1BQKB1R b KQkq - 0 5', what is the best legal move for Black?",
+      "ground_truth": "Nxd5",
+      "fen": "r1bqkb1r/ppp2ppp/2n2n2/3Pp3/8/2N2NP1/PP1PPP1P/R1BQKB1R b KQkq - 0 5",
+      "solution": "Nxd5",
+      "solution_uci": "f6d5",
+      "solution_line": [
+        "Nxd5"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1620,
+      "description": "Master opening continuation after cxd5",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-073",
+      "question": "Given the chess position with FEN: 'r1bqkb1r/ppp2ppp/2n5/3np3/8/2N2NP1/PP1PPP1P/R1BQKB1R w KQkq - 0 6', what is the best legal move for White?",
+      "ground_truth": "Bg2",
+      "fen": "r1bqkb1r/ppp2ppp/2n5/3np3/8/2N2NP1/PP1PPP1P/R1BQKB1R w KQkq - 0 6",
+      "solution": "Bg2",
+      "solution_uci": "f1g2",
+      "solution_line": [
+        "Bg2"
+      ],
+      "category": "opening_theory",
+      "difficulty": "easy",
+      "rating": 1660,
+      "description": "Master opening continuation after Nxd5",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-074",
+      "question": "Given the chess position with FEN: 'r1bqkb1r/ppp2ppp/2n5/3np3/8/2N2NP1/PP1PPPBP/R1BQK2R b KQkq - 1 6', what is the best legal move for Black?",
+      "ground_truth": "Nb6",
+      "fen": "r1bqkb1r/ppp2ppp/2n5/3np3/8/2N2NP1/PP1PPPBP/R1BQK2R b KQkq - 1 6",
+      "solution": "Nb6",
+      "solution_uci": "d5b6",
+      "solution_line": [
+        "Nb6"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1700,
+      "description": "Master opening continuation after Bg2",
+      "turn": "black"
+    },
+    {
+      "id": "chess-gen-075",
+      "question": "Given the chess position with FEN: 'r1bqkb1r/ppp2ppp/1nn5/4p3/8/2N2NP1/PP1PPPBP/R1BQK2R w KQkq - 2 7', what is the best legal move for White?",
+      "ground_truth": "O-O",
+      "fen": "r1bqkb1r/ppp2ppp/1nn5/4p3/8/2N2NP1/PP1PPPBP/R1BQK2R w KQkq - 2 7",
+      "solution": "O-O",
+      "solution_uci": "e1g1",
+      "solution_line": [
+        "O-O"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1740,
+      "description": "Master opening continuation after Nb6",
+      "turn": "white"
+    },
+    {
+      "id": "chess-gen-076",
+      "question": "Given the chess position with FEN: 'r1bqkb1r/ppp2ppp/1nn5/4p3/8/2N2NP1/PP1PPPBP/R1BQ1RK1 b kq - 3 7', what is the best legal move for Black?",
+      "ground_truth": "Be7",
+      "fen": "r1bqkb1r/ppp2ppp/1nn5/4p3/8/2N2NP1/PP1PPPBP/R1BQ1RK1 b kq - 3 7",
+      "solution": "Be7",
+      "solution_uci": "f8e7",
+      "solution_line": [
+        "Be7"
+      ],
+      "category": "opening_theory",
+      "difficulty": "medium",
+      "rating": 1780,
+      "description": "Master opening continuation after O-O",
+      "turn": "black"
+    }
+  ]
+}

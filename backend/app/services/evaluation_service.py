@@ -459,6 +459,7 @@ class EvaluationRunner:
                         question=case.question,
                         ground_truth=case.ground_truth,
                         inline_context=case.context,
+                        extra_metadata=case.extra_metadata or {},
                         system_prompt=experiment.system_prompt,
                         prompt_template=experiment.prompt_template,
                         temperature=experiment.temperature,

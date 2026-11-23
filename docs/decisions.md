@@ -286,6 +286,30 @@ Runs persist lifecycle states (`queued`, `running`, `succeeded`, `failed`, `canc
 **Trade-offs.**
 - **Log Parsing Overhead.** Regex redaction incurs a minor CPU cost on log emissions. Benchmarks demonstrate negligible latency impact (<0.1ms per request).
 
+---
+
+## ADR-021 — Reasoning Arena: Chess Evaluation Module
+
+**Decision.** Implement "Reasoning Arena: Chess", a game-based reasoning benchmark evaluating how LLMs adhere to spatial rules, calculate multi-step tactics, and play chess using objective ground truth (python-chess rules engine and optional Stockfish engine) without requiring an LLM judge.
+1. **Generic Game Abstraction & Rules Engine:** Introduced `GameEnvironment` abstraction in `app/evaluation/games/` with a complete `ChessEnvironment` implementation using `python-chess`. Move parsing strictly handles SAN and UCI formats, strips commentary, and flags unparseable or illegal outputs without guessing.
+2. **Graceful Engine Degradation:** Stockfish integration is strictly optional. When detected via `STOCKFISH_PATH` or system `PATH`, it evaluates positions and moves deterministically using fixed search depth or nodes. When Stockfish is absent, legality, format compliance, puzzle accuracy, and mate finding remain fully functional, while engine-dependent metrics (`avg_centipawn_loss`, `blunder_rate`) report `available: false` with the explicit reason `"Stockfish not installed"`.
+3. **Six Deterministic Metrics in Single Source of Truth Registry:** Registered `legal_move_rate`, `format_compliance_rate`, `puzzle_accuracy`, `mate_found_rate`, `avg_centipawn_loss`, and `blunder_rate` in `app/evaluation/registry.py` under the `game_reasoning` group.
+4. **Game-Aware Failure Classification & Remediations:** Extended `FAILURE_TYPES` in `failure_detector.py` and `diagnosis_service.py` with 6 chess-specific failure types (`illegal_move`, `unparseable_move`, `wrong_color_or_turn_confusion`, `blunder`, `missed_mate`, `missed_tactic`) paired with concrete prompt and representation remediations.
+5. **Interactive LangGraph Workflow & Quota Protection:** Full game mode executes via a compiled `ChessGameGraph` with strict move caps (`max_moves`, default 60), configurable retry policies (default 1 retry for illegal moves before forfeit), and dry-run estimation endpoints (`/api/arena/chess/dry-run`) to calculate upper-bound provider calls and token usage before execution.
+6. **Legitimate Benchmark Pack:** Seeded the 7th benchmark pack (`chess_reasoning`) with 76 programmatically verified chess puzzles across mateIn1, mateIn2, fork, pin, and endgame themes, dedicated to the public domain under Creative Commons Zero (CC0).
+7. **Transparent Recommendation Profile & Honest Framing:** Added `"game_reasoning"` profile to `recommendation_service.py`. Enforced strict honesty policies: chess skill is presented as one specific signal for spatial/game reasoning, never as proof of general intelligence or universal superiority, and fake Elo ratings are prohibited.
+
+**Why.**
+1. **Objective Ground Truth:** LLM judges are non-deterministic, expensive, and subject to sycophancy or position hallucinations. A rules engine provides mathematically certain pass/fail ground truth.
+2. **Model Selection Signal for Complex Reasoning:** Developers building agentic applications need reproducible signals for multi-step state tracking, spatial reasoning, and rule compliance.
+3. **Safe Provider Quota Bounds:** Multi-ply agentic games can runaway and deplete user API quotas. Enforcing hard move caps and pre-flight dry-run estimates prevents accidental cost overruns.
+4. **Honest Evaluation:** LLM evaluation platforms frequently make unsubstantiated claims of "best reasoning model" based on games. Clear honesty guardrails preserve technical credibility.
+
+**Trade-offs.**
+- **Domain Specificity.** Chess performance reflects spatial/symbolic reasoning on board state and does not measure broad linguistic or factual reasoning. This caveat is explicitly highlighted in the UI and documentation.
+- **Stockfish Installation.** While rules evaluation runs out-of-the-box, centipawn loss and blunder evaluations require installing Stockfish locally or running in containers equipped with the binary.
+
+
 
 
 

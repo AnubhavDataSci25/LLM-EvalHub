@@ -30,6 +30,9 @@ class ProviderAuditRequest(BaseModel):
     dry_run: bool = Field(
         default=False, description="Estimate probe calls without executing generations"
     )
+    background: bool = Field(
+        default=False, description="Execute audit in background and return run handle immediately"
+    )
 
 
 class ModelAvailabilityRead(BaseModel):

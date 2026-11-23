@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.evaluation import metrics as det
+from app.evaluation.games.chess_metrics import evaluate_chess_metrics
 from app.evaluation.judge import LLMJudge
 from app.evaluation.metrics import MetricOutcome
 
@@ -134,10 +135,78 @@ METRIC_SPECS: dict[str, MetricSpec] = {
         default_enabled=False,
         group="performance",
     ),
+    "legal_move_rate": MetricSpec(
+        key="legal_move_rate",
+        label="Legal move rate",
+        description="Fraction of generated moves that are strictly legal in the given chess position.",
+        default_kind=DETERMINISTIC,
+        requires=["question"],
+        higher_is_better=True,
+        default_enabled=False,
+        group="game_reasoning",
+    ),
+    "format_compliance_rate": MetricSpec(
+        key="format_compliance_rate",
+        label="Format compliance rate",
+        description="Fraction of responses containing an unambiguously parseable move in SAN or UCI format.",
+        default_kind=DETERMINISTIC,
+        requires=[],
+        higher_is_better=True,
+        default_enabled=False,
+        group="game_reasoning",
+    ),
+    "puzzle_accuracy": MetricSpec(
+        key="puzzle_accuracy",
+        label="Puzzle accuracy",
+        description="Fraction of puzzle positions where the model produces the objective ground truth best move.",
+        default_kind=DETERMINISTIC,
+        requires=["ground_truth"],
+        higher_is_better=True,
+        default_enabled=False,
+        group="game_reasoning",
+    ),
+    "mate_found_rate": MetricSpec(
+        key="mate_found_rate",
+        label="Mate found rate",
+        description="Accuracy on positions where a forced checkmate in 1 or 2 moves exists.",
+        default_kind=DETERMINISTIC,
+        requires=["ground_truth"],
+        higher_is_better=True,
+        default_enabled=False,
+        group="game_reasoning",
+    ),
+    "avg_centipawn_loss": MetricSpec(
+        key="avg_centipawn_loss",
+        label="Avg centipawn loss",
+        description="Average centipawn evaluation loss of legal moves against Stockfish (lower is better; unavailable if Stockfish is not installed).",
+        default_kind=DETERMINISTIC,
+        requires=[],
+        higher_is_better=False,
+        default_enabled=False,
+        group="game_reasoning",
+    ),
+    "blunder_rate": MetricSpec(
+        key="blunder_rate",
+        label="Blunder rate",
+        description="Fraction of legal moves with centipawn loss exceeding the blunder threshold (lower is better; unavailable if Stockfish is not installed).",
+        default_kind=DETERMINISTIC,
+        requires=[],
+        higher_is_better=False,
+        default_enabled=False,
+        group="game_reasoning",
+    ),
 }
 
 DEFAULT_METRICS = [k for k, s in METRIC_SPECS.items() if s.default_enabled]
 RAG_METRICS = ["context_precision", "context_recall", "retrieval_hit_rate"]
+CHESS_METRICS = [
+    "legal_move_rate",
+    "format_compliance_rate",
+    "puzzle_accuracy",
+    "mate_found_rate",
+    "avg_centipawn_loss",
+    "blunder_rate",
+]
 
 
 def metric_spec(key: str) -> MetricSpec | None:
@@ -158,6 +227,7 @@ class EvaluationInputs:
     contexts: list[str]
     latency_ms: float | None
     latency_budget_ms: float = 4000.0
+    extra_metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class Evaluator:
@@ -180,9 +250,21 @@ class Evaluator:
         self.ragas = ragas_adapter
 
     async def evaluate(self, inputs: EvaluationInputs) -> list[MetricOutcome]:
+        chess_scores: dict[str, MetricOutcome] | None = None
+        if any(k in self.metrics for k in CHESS_METRICS):
+            chess_scores = evaluate_chess_metrics(
+                question=inputs.question,
+                answer=inputs.answer,
+                ground_truth=inputs.ground_truth,
+                extra_metadata=inputs.extra_metadata,
+            )
+
         outcomes: list[MetricOutcome] = []
         for key in self.metrics:
-            outcome = await self._evaluate_one(key, inputs)
+            if key in CHESS_METRICS:
+                outcome = (chess_scores or {}).get(key)
+            else:
+                outcome = await self._evaluate_one(key, inputs)
             if outcome is not None:
                 outcomes.append(outcome)
         return outcomes

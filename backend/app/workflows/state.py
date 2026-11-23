@@ -29,6 +29,7 @@ class EvaluationState(TypedDict, total=False):
     question: str
     ground_truth: str | None
     inline_context: str | None
+    extra_metadata: dict[str, Any]
     system_prompt: str | None
     prompt_template: str
     temperature: float

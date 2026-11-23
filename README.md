@@ -25,6 +25,7 @@ Run one dataset against several providers at once, score the answers with determ
 - [Failure taxonomy](#failure-taxonomy)
 - [Counterfactual failure attribution](#counterfactual-failure-attribution)
 - [Benchmark packs](#benchmark-packs)
+- [Reasoning Arena: Chess](#reasoning-arena-chess)
 - [RAG pipeline](#rag-pipeline)
 - [API](#api)
 - [Testing](#testing)
@@ -99,7 +100,8 @@ Background evaluation runs are backed by a durable `Job` state machine and unifi
 | **Improvement loop** | Accept a suggestion → follow-up experiment created → re-run → before/after verdict |
 | **Recommendations** | Weighted ranking with score breakdown, hard constraints, evidence and caveats |
 | **In-app documentation** | Interactive `/documentation` with 3-column layout, client-side fuzzy search, copy-link headings, print styling, and verified Group A getting-started reference |
-| **Benchmark packs** | Six ready-made scenarios, installable in one click |
+| **Benchmark packs** | Seven ready-made scenarios, installable in one click |
+| **Reasoning Arena** | Objective game-based chess benchmark against python-chess and Stockfish without an LLM judge |
 | **Reports** | Frozen web reports with JSON and CSV export |
 
 ---
@@ -282,7 +284,7 @@ Counterfactual Failure Attribution intervenes directly by re-running the failed 
 
 ## Benchmark packs
 
-Six packs ship with the repository, all synthetic and redistributable:
+Seven packs ship with the repository, all synthetic and redistributable:
 
 | Pack | Cases | Focus |
 |---|---|---|
@@ -292,10 +294,24 @@ Six packs ship with the repository, all synthetic and redistributable:
 | `citation_grounding` | 20 | Half deliberately unanswerable — rewards declining over guessing |
 | `structured_extraction` | 18 | Field extraction from unstructured text |
 | `summarization` | 12 | Decisions and owners from operational transcripts |
+| `chess_reasoning` | 76 | Objective spatial and tactical chess reasoning benchmark (CC0 license) |
 
 Each pack carries recommended metrics, baseline settings, and notes explaining *why* those metrics fit the use case. Installing a pack creates a real dataset and, where relevant, indexes its documents.
 
 Adding your own pack is a directory drop: `benchmarks/<key>/pack.json` plus a dataset file. No code change.
+
+---
+
+## Reasoning Arena: Chess
+
+The Reasoning Arena provides an objective ground-truth benchmark of how well models adhere to spatial rules, follow multi-step game logic, and calculate chess moves.
+
+* **Objective ground truth:** Rules and legality are verified programmatically via `python-chess`. No LLM judge is required.
+* **Optional Stockfish integration:** When Stockfish is detected on `PATH` or configured via `STOCKFISH_PATH`, evaluations calculate centipawn evaluation loss and blunder rates using fixed depth or nodes for reproducibility. If Stockfish is absent, rules, format compliance, and puzzle accuracy work normally while engine-dependent metrics report `available: false` with the reason `"Stockfish not installed"`.
+* **Six registered metrics:** `legal_move_rate`, `format_compliance_rate`, `puzzle_accuracy`, `mate_found_rate`, `avg_centipawn_loss`, and `blunder_rate`.
+* **Discrete failure taxonomy:** Chess failures are classified into `illegal_move`, `unparseable_move`, `wrong_color_or_turn_confusion`, `blunder`, `missed_mate`, and `missed_tactic` with machine-applicable remediations (prompt representations, step-by-step reasoning).
+* **Bounded game mode & quota guardrails:** Interactive games against Stockfish enforce strict move caps (default 60), configurable illegal-move retry policies (default 1 retry before forfeit), and dry-run estimation endpoints (`/api/arena/chess/dry-run`) to prevent quota runaway.
+* **Honest framing:** The UI and documentation explicitly state: *Chess skill is one specific signal for game-reasoning ability and does not prove general model reasoning.* LLM-EvalHub does not compute fake Elo ratings or claim any model is "best at reasoning".
 
 ---
 

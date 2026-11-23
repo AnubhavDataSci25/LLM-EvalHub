@@ -33,6 +33,12 @@ FAILURE_TYPES = {
     "incorrect_answer": "The answer disagrees with the expected answer.",
     "low_relevance": "The answer does not address the question that was asked.",
     "high_latency": "The answer was acceptable but far slower than the configured budget.",
+    "illegal_move": "The model proposed a move that violates the rules of chess in the given position.",
+    "unparseable_move": "The model output did not contain a recognized, unambiguously parseable chess move.",
+    "wrong_color_or_turn_confusion": "The model generated a move that would be legal for the opponent, indicating turn confusion.",
+    "blunder": "The move was legal but caused a critical loss in position evaluation against the engine.",
+    "missed_mate": "The position contained a forced mate-in-N that the model failed to find.",
+    "missed_tactic": "The position contained a tactical winning move that the model failed to find.",
 }
 
 SEVERITY_ORDER = {"critical": 3, "high": 2, "medium": 1, "low": 0}
@@ -87,6 +93,7 @@ def classify(
     error_kind: str | None = None,
     error_message: str | None = None,
     thresholds: FailureThresholds | None = None,
+    extra_metadata: dict[str, Any] | None = None,
 ) -> FailureVerdict:
     th = thresholds or FailureThresholds()
     scores = {
@@ -124,6 +131,79 @@ def classify(
             evidence=["The model produced no text for this test case."],
             signals=signals,
         )
+
+    # -- 1b. chess / game-reasoning signals -------------------------------
+    outcome_map = {o.metric: o for o in outcomes}
+    if "format_compliance_rate" in outcome_map or "legal_move_rate" in outcome_map:
+        fmt_outcome = outcome_map.get("format_compliance_rate")
+        legal_outcome = outcome_map.get("legal_move_rate")
+        puzzle_outcome = outcome_map.get("puzzle_accuracy")
+        mate_outcome = outcome_map.get("mate_found_rate")
+        blunder_outcome = outcome_map.get("blunder_rate")
+
+        if fmt_outcome and fmt_outcome.available and fmt_outcome.raw_score == 0.0:
+            return FailureVerdict(
+                failed=True,
+                failure_type="unparseable_move",
+                severity="high",
+                detector="rule",
+                confidence=0.95,
+                evidence=["The model output did not contain an unambiguously parseable move in SAN or UCI format."],
+                signals=signals,
+            )
+
+        if legal_outcome and legal_outcome.available and legal_outcome.raw_score == 0.0:
+            details = legal_outcome.details or {}
+            reason = details.get("error_reason")
+            is_turn_confusion = reason == "wrong_color_or_turn_confusion"
+            ftype = "wrong_color_or_turn_confusion" if is_turn_confusion else "illegal_move"
+            desc = (
+                "The move is legal for the opponent, indicating turn/color confusion."
+                if is_turn_confusion
+                else f"The proposed move '{details.get('parsed')}' violates chess rules in this position."
+            )
+            return FailureVerdict(
+                failed=True,
+                failure_type=ftype,
+                severity="high",
+                detector="rule",
+                confidence=0.95,
+                evidence=[desc],
+                signals=signals,
+            )
+
+        if blunder_outcome and blunder_outcome.available and blunder_outcome.raw_score == 1.0:
+            return FailureVerdict(
+                failed=True,
+                failure_type="blunder",
+                severity="medium",
+                detector="metric",
+                confidence=0.90,
+                evidence=["The move is legal but resulted in a severe centipawn evaluation loss (>300 cp)."],
+                signals=signals,
+            )
+
+        if mate_outcome and mate_outcome.available and mate_outcome.raw_score == 0.0:
+            return FailureVerdict(
+                failed=True,
+                failure_type="missed_mate",
+                severity="high",
+                detector="metric",
+                confidence=0.92,
+                evidence=["The position had a forced mate that the model failed to find."],
+                signals=signals,
+            )
+
+        if puzzle_outcome and puzzle_outcome.available and puzzle_outcome.raw_score == 0.0:
+            return FailureVerdict(
+                failed=True,
+                failure_type="missed_tactic",
+                severity="medium",
+                detector="metric",
+                confidence=0.90,
+                evidence=["The model played a legal move that was not the optimal tactical solution."],
+                signals=signals,
+            )
 
     evidence: list[str] = []
 

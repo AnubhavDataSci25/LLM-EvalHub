@@ -2,7 +2,7 @@ export const benchmarksSection = {
   id: 'benchmarks',
   title: 'Benchmark Packs',
   group: 'Using the platform',
-  summary: 'Ready-to-use starter packages for six real-world evaluation scenarios, complete with synthetic datasets, recommended metrics, and baseline configurations.',
+  summary: 'Ready-to-use starter packages for seven real-world evaluation scenarios, complete with synthetic datasets, recommended metrics, and baseline configurations.',
   blocks: [
     {
       type: 'paragraph',
@@ -12,13 +12,13 @@ export const benchmarksSection = {
       type: 'callout',
       tone: 'honesty',
       title: 'Packs Are Starter Sets, Not Authoritative Baselines',
-      body: 'Benchmark packs contain between 12 and 32 focused test cases (131 cases total across all 6 packs). They are designed for quick orientation, pipeline smoke testing, and regression sanity checks. They are not authoritative industry benchmarks and do not substitute for a representative sample of your own domain data.',
+      body: 'Benchmark packs contain between 12 and 76 focused test cases (207 cases total across all 7 packs). They are designed for quick orientation, pipeline smoke testing, and regression sanity checks. They are not authoritative industry benchmarks and do not substitute for a representative sample of your own domain data.',
     },
     {
       type: 'heading',
-      id: 'the-six-packs',
+      id: 'the-seven-packs',
       level: 2,
-      text: 'The Six Benchmark Packs',
+      text: 'The Seven Benchmark Packs',
     },
     {
       type: 'table',
@@ -31,6 +31,7 @@ export const benchmarksSection = {
         ['`citation_grounding`', 'Citation Grounding', '20', 'Evaluates whether citations and source tags provided by the LLM accurately match the retrieved evidence chunks.', '`faithfulness`, `context_precision`, `correctness`', 'temp=0.0, strict citation prompt requiring [source:id] syntax'],
         ['`structured_extraction`', 'Structured Extraction', '18', 'Extracting structured JSON entities (invoices, dates, line items, monetary amounts) from unstructured plain text.', '`correctness`, `answer_relevance`, `latency`', 'temp=0.0, strict JSON schema output instruction'],
         ['`summarization`', 'Summarization', '12', 'Condensing long multi-paragraph documents into concise summaries while retaining critical facts.', '`answer_relevance`, `faithfulness`, `completeness`, `latency`', 'temp=0.2, max_tokens=300'],
+        ['`chess_reasoning`', 'Reasoning Arena: Chess', '76', 'Objective spatial and tactical chess reasoning benchmark across mate-in-1, mate-in-2, fork, pin, and endgame positions without an LLM judge.', '`legal_move_rate`, `format_compliance_rate`, `puzzle_accuracy`, `mate_found_rate`, `avg_centipawn_loss`, `blunder_rate`', 'temp=0.0, prompt_variant=fen_ascii, think_step_by_step=false'],
       ],
     },
     {

@@ -20,6 +20,7 @@ import Landing from './pages/Landing'
 import Login from './pages/Login'
 import NewEvaluation from './pages/NewEvaluation'
 import Recommendations from './pages/Recommendations'
+import ReasoningArena from './pages/ReasoningArena'
 import Register from './pages/Register'
 import ReportDetail from './pages/ReportDetail'
 import Reports from './pages/Reports'
@@ -107,6 +108,7 @@ export default function App() {
                   <Route path="/evaluations/:id" element={<EvaluationDetail />} />
                   <Route path="/experiments" element={<Experiments />} />
                   <Route path="/experiments/:id" element={<ExperimentDetail />} />
+                  <Route path="/arena/chess" element={<ReasoningArena />} />
                   <Route path="/compare" element={<Compare />} />
                   <Route path="/failures" element={<Failures />} />
                   <Route path="/failures/:id" element={<FailureDetail />} />

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, BackgroundTasks, Query
 
 from app.api.deps import DbSession
 from app.core.exceptions import NotFoundError
@@ -72,11 +72,13 @@ async def available_models(
 @router.post("/audit", summary="Trigger a model availability audit")
 async def run_audit(
     payload: ProviderAuditRequest,
+    background_tasks: BackgroundTasks,
     db: DbSession,
 ) -> dict[str, Any]:
     """Runs a model availability audit.
 
     Supports dry_run to estimate provider call counts without executing probes.
+    Supports background=True to return immediately with an audit run handle.
     """
     service = AuditService(db)
     target_providers = payload.providers or [p["key"] for p in ProviderService(db).describe_all()]
@@ -86,6 +88,37 @@ async def run_audit(
             target_providers, payload.max_probes_per_provider
         )
         return est
+
+    if payload.background:
+        from app.db.base import new_id
+
+        audit_run = AuditRun(
+            id=new_id("aud"),
+            status="running",
+            providers=target_providers,
+            dry_run=False,
+            summary={"total_candidates": 0, "total_probed": 0, "by_status": {}, "by_provider": {}},
+        )
+        db.add(audit_run)
+        db.commit()
+        db.refresh(audit_run)
+
+        background_tasks.add_task(
+            _run_audit_background,
+            audit_run.id,
+            target_providers,
+            payload.max_probes_per_provider,
+        )
+
+        return {
+            "id": audit_run.id,
+            "audit_run_id": audit_run.id,
+            "status": audit_run.status,
+            "providers": audit_run.providers,
+            "summary": audit_run.summary,
+            "items": [],
+            "max_probes_per_provider": payload.max_probes_per_provider,
+        }
 
     audit_run = await service.execute_audit(
         target_providers=target_providers,
@@ -143,6 +176,7 @@ async def get_audit(audit_id: str, db: DbSession) -> dict[str, Any]:
 
     return {
         "id": audit_run.id,
+        "audit_run_id": audit_run.id,
         "status": audit_run.status,
         "providers": audit_run.providers,
         "summary": audit_run.summary,

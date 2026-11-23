@@ -236,6 +236,7 @@ class EvaluationGraph:
                 contexts=list(state.get("retrieved_context") or []),
                 latency_ms=state.get("latency_ms"),
                 latency_budget_ms=self.latency_budget_ms,
+                extra_metadata=state.get("extra_metadata") or {},
             )
         )
         scores = {
@@ -262,6 +263,7 @@ class EvaluationGraph:
             error_kind=state.get("error_kind"),
             error_message=state.get("error_message"),
             thresholds=self.thresholds,
+            extra_metadata=state.get("extra_metadata") or {},
         )
         failure = None
         if verdict.failed:

@@ -244,6 +244,38 @@ START ─→ build_inputs ─→ generate ─→ evaluate ─→ attribute ─�
 4. **attribute**: Pure decision engine (`compute_attribution`) computes pass rates, checks thresholds from configuration, compares condition success, assigns attribution verdict (`RETRIEVAL_CAUSED`, `GENERATION_CAUSED`, `PARAMETRIC_KNOWLEDGE`, `NOT_CONTEXT_DEPENDENT`, `NOT_ATTRIBUTABLE`), caps confidence at 0.95, and compiles actionable recommendations.
 5. **persist**: Persists `AttributionRun` and individual trial records `AttributionCondition` with transaction safety, linking them directly to the `Failure` entity.
 
+## Reasoning Arena Architecture (Chess)
+
+The Reasoning Arena provides an objective, deterministic evaluation module for game-based and spatial reasoning using rules and engine evaluation without an LLM judge:
+
+```
+User Prompt (FEN / ASCII)
+       │
+       ▼
+LLM Generation ──► Strict Parser (SAN / UCI) ──► python-chess Legality
+                                                          │
+                         ┌────────────────────────────────┴────────────────────────┐
+                         │                                                         │
+                     [Illegal]                                                  [Legal]
+                         │                                                         │
+                Retry Policy Check                                          Engine Analysis
+                         │                                                  (Stockfish/Stub)
+           ┌─────────────┴─────────────┐                                           │
+           ▼                           ▼                                    Centipawn Loss
+      Retry Prompt                  Forfeit                                  Blunder Check
+ (Feedback on illegal move)    (illegal_move_forfeit)                              │
+                                                                                   ▼
+                                                                             Apply to Board
+                                                                                   │
+                                                                           Opponent Move (Ply+1)
+```
+
+1. **Environment Abstraction (`GameEnvironment`):** Located in `app/evaluation/games/`. Provides generic interfaces for position reset/load, prompt rendering (`fen_only`, `fen_ascii`, `fen_legal_moves`, `fen_ascii_legal`), strict action parsing, legality validation, state transition, and terminal checks.
+2. **Deterministic Rules & Stockfish Engine:** Rules validation uses `python-chess`. Engine analysis uses UCI integration with fixed depth or nodes in a thread-pool (`asyncio.to_thread`). If Stockfish is absent, legality, format compliance, and puzzle accuracy work normally, while engine metrics report `available: false` with the reason `"Stockfish not installed"`.
+3. **LangGraph Workflow (`ChessGameGraph`):** Interactive game loop (`check_terminal -> model_generate -> parse_and_validate -> engine_turn -> finalize`) with hard move caps (`max_moves`, default 60), configurable retry policies (default 1 retry for illegal moves), and dry-run estimation.
+4. **Metrics & Failure Taxonomy:** 6 metrics (`legal_move_rate`, `format_compliance_rate`, `puzzle_accuracy`, `mate_found_rate`, `avg_centipawn_loss`, `blunder_rate`) registered in the metric registry under `game_reasoning`. Failures classified into `illegal_move`, `unparseable_move`, `wrong_color_or_turn_confusion`, `blunder`, `missed_mate`, `missed_tactic` with concrete prompt remediations.
+5. **Interactive UI (`ReasoningArena.jsx`):** Features custom SVG `ChessBoard` with coordinate labels, move highlights, responsive SVG piece paths, interactive ply scrubber stepper, live move history table, raw thought inspector, and dry-run estimation modal.
+
 ## Frontend
 
 - **State:** local, with three hooks (`useApi`, `useRunPolling`, `useTheme`). A server-state library would be more machinery than seventeen pages of read-mostly data justify.

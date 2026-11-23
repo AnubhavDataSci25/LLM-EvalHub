@@ -20,7 +20,7 @@ from app.core.exceptions import ProviderError, RateLimitedError, ValidationFaile
 from app.core.logging import get_logger
 from app.db.base import new_id
 from app.models.audit import AuditRun, ModelAvailability
-from app.providers.base import LLMProvider
+from app.providers.base import LLMProvider, ModelInfo
 from app.providers.catalog import static_models
 from app.providers.filtering import filter_chat_models
 from app.providers.registry import (
@@ -206,6 +206,40 @@ class AuditService:
             latency_ms = (time.perf_counter() - started) * 1000.0
             return "UPSTREAM_ERROR", f"Unexpected error during probe: {str(exc)[:200]}", latency_ms, None
 
+    async def _probe_provider_candidates(
+        self,
+        provider: LLMProvider,
+        candidates: list[ModelInfo],
+        semaphore: asyncio.Semaphore,
+    ) -> list[tuple[ModelInfo, str, str, float | None, float | None]]:
+        auth_failed = False
+        quota_exhausted = False
+
+        async def _probe_single(cand: ModelInfo) -> tuple[ModelInfo, str, str, float | None, float | None]:
+            nonlocal auth_failed, quota_exhausted
+            if auth_failed:
+                return cand, "NOT_PROBED", "Skipped: provider credentials invalid.", None, None
+            if quota_exhausted:
+                return cand, "NOT_PROBED", "Skipped: provider quota exhausted.", None, None
+
+            async with semaphore:
+                if auth_failed:
+                    return cand, "NOT_PROBED", "Skipped: provider credentials invalid.", None, None
+                if quota_exhausted:
+                    return cand, "NOT_PROBED", "Skipped: provider quota exhausted.", None, None
+
+                status, reason, latency_ms, retry_after = await self.probe_model(
+                    provider, cand.id
+                )
+                if status == "INVALID_CREDENTIALS":
+                    auth_failed = True
+                elif status == "RATE_LIMITED" and ((retry_after and retry_after > 60) or "quota" in reason.lower()):
+                    quota_exhausted = True
+
+                return cand, status, reason, latency_ms, retry_after
+
+        return await asyncio.gather(*[_probe_single(c) for c in candidates])
+
     async def recheck_model(self, provider_key: str, model_id: str) -> ModelAvailability:
         """On-demand live probe for a single model, updating cache and history."""
         provider = get_provider(provider_key)
@@ -297,6 +331,8 @@ class AuditService:
                 candidates = await provider.discover_models()
             except Exception:
                 candidates = static_models(key)
+            if not candidates:
+                candidates = static_models(key)
 
             chat_candidates, _ = filter_chat_models(candidates)
             c_count = len(chat_candidates)
@@ -324,7 +360,7 @@ class AuditService:
         max_probes_per_provider: int = 15,
         providers: list[str] | None = None,
     ) -> AuditRun:
-        """Execute a full live audit run across requested providers."""
+        """Execute a full live audit run across requested providers with bounded concurrency."""
         target_keys = providers if providers is not None else target_providers
         if audit_run_id is None:
             audit_run = AuditRun(
@@ -340,6 +376,7 @@ class AuditService:
             if not audit_run:
                 raise ValidationFailedError(f"AuditRun '{audit_run_id}' not found.")
 
+        active_run_id = audit_run.id
         keys = target_keys or [p.key for p in all_providers()]
         # Filter to registered providers, skipping mock unless enabled
         keys = [k for k in keys if is_provider_registered(k)]
@@ -356,7 +393,8 @@ class AuditService:
             "by_status": {},
             "by_provider": {},
         }
-        semaphore = asyncio.Semaphore(settings.max_probe_concurrency)
+        concurrency_limit = max(1, int(settings.max_probe_concurrency))
+        semaphore = asyncio.Semaphore(concurrency_limit)
 
         try:
             for p_key in keys:
@@ -374,12 +412,13 @@ class AuditService:
                             status="INVALID_CREDENTIALS",
                             reason=f"Provider '{p_key}' credentials not configured.",
                             checked_at=_now(),
-                            audit_run_id=audit_run.id,
+                            audit_run_id=active_run_id,
                             context_window=m.context_window,
                         )
                         self.db.add(rec)
                         p_summary["INVALID_CREDENTIALS"] = p_summary.get("INVALID_CREDENTIALS", 0) + 1
                     overall_summary["by_provider"][p_key] = p_summary
+                    self.db.commit()
                     continue
 
                 # 2. Live model discovery
@@ -389,79 +428,23 @@ class AuditService:
                     logger.warning("Discovery error for %s: %s; falling back to static", p_key, exc)
                     candidates = static_models(p_key)
 
+                if not candidates:
+                    logger.info("Discovery returned 0 models for %s; using static catalog fallback", p_key)
+                    candidates = static_models(p_key)
+
                 chat_candidates, excluded = filter_chat_models(candidates)
                 overall_summary["total_candidates"] += len(chat_candidates)
 
-                quota_exhausted = False
-                auth_failed = False
-                probes_run = 0
+                to_probe = chat_candidates[:max_probes_per_provider]
+                capped = chat_candidates[max_probes_per_provider:]
 
-                for idx, candidate in enumerate(chat_candidates):
-                    # Probe cap enforcement
-                    if idx >= max_probes_per_provider:
-                        rec = ModelAvailability(
-                            id=new_id("mav"),
-                            provider=p_key,
-                            model_id=candidate.id,
-                            status="NOT_PROBED",
-                            reason=f"Cap reached (max {max_probes_per_provider} probes per provider).",
-                            checked_at=_now(),
-                            audit_run_id=audit_run.id,
-                            context_window=candidate.context_window,
-                            tier=candidate.tier,
-                        )
-                        self.db.add(rec)
-                        p_summary["NOT_PROBED"] = p_summary.get("NOT_PROBED", 0) + 1
-                        continue
+                # Probe candidates with bounded concurrency
+                probe_results = await self._probe_provider_candidates(provider, to_probe, semaphore)
 
-                    if auth_failed:
-                        rec = ModelAvailability(
-                            id=new_id("mav"),
-                            provider=p_key,
-                            model_id=candidate.id,
-                            status="NOT_PROBED",
-                            reason="Skipped: provider credentials invalid.",
-                            checked_at=_now(),
-                            audit_run_id=audit_run.id,
-                            context_window=candidate.context_window,
-                            tier=candidate.tier,
-                        )
-                        self.db.add(rec)
-                        p_summary["NOT_PROBED"] = p_summary.get("NOT_PROBED", 0) + 1
-                        continue
-
-                    if quota_exhausted:
-                        rec = ModelAvailability(
-                            id=new_id("mav"),
-                            provider=p_key,
-                            model_id=candidate.id,
-                            status="NOT_PROBED",
-                            reason="Skipped: provider quota exhausted.",
-                            checked_at=_now(),
-                            audit_run_id=audit_run.id,
-                            context_window=candidate.context_window,
-                            tier=candidate.tier,
-                        )
-                        self.db.add(rec)
-                        p_summary["NOT_PROBED"] = p_summary.get("NOT_PROBED", 0) + 1
-                        continue
-
-                    # Execute cheap probe with concurrency control
-                    async with semaphore:
-                        status, reason, latency_ms, retry_after = await self.probe_model(
-                            provider, candidate.id
-                        )
-
-                    probes_run += 1
-                    overall_summary["total_probed"] += 1
+                for candidate, status, reason, latency_ms, retry_after in probe_results:
+                    if status != "NOT_PROBED":
+                        overall_summary["total_probed"] += 1
                     p_summary[status] = p_summary.get(status, 0) + 1
-
-                    if status == "INVALID_CREDENTIALS":
-                        auth_failed = True
-                    elif status == "RATE_LIMITED":
-                        # If retry-after is large or message says quota exhausted, early-stop probing this provider
-                        if (retry_after and retry_after > 60) or "quota" in reason.lower():
-                            quota_exhausted = True
 
                     rec = ModelAvailability(
                         id=new_id("mav"),
@@ -472,13 +455,32 @@ class AuditService:
                         checked_at=_now(),
                         latency_ms=round(latency_ms, 2) if latency_ms else None,
                         retry_after=retry_after,
-                        audit_run_id=audit_run.id,
+                        audit_run_id=active_run_id,
                         context_window=candidate.context_window,
                         tier=candidate.tier,
                     )
                     self.db.add(rec)
 
+                # Process capped candidates
+                for candidate in capped:
+                    rec = ModelAvailability(
+                        id=new_id("mav"),
+                        provider=p_key,
+                        model_id=candidate.id,
+                        status="NOT_PROBED",
+                        reason=f"Cap reached (max {max_probes_per_provider} probes per provider).",
+                        checked_at=_now(),
+                        audit_run_id=active_run_id,
+                        context_window=candidate.context_window,
+                        tier=candidate.tier,
+                    )
+                    self.db.add(rec)
+                    p_summary["NOT_PROBED"] = p_summary.get("NOT_PROBED", 0) + 1
+
                 overall_summary["by_provider"][p_key] = p_summary
+                # Commit progress per provider
+                audit_run.summary = overall_summary
+                self.db.commit()
 
             # Aggregate by status
             for p_counts in overall_summary["by_provider"].values():
@@ -489,18 +491,18 @@ class AuditService:
             audit_run.status = "COMPLETED"
             audit_run.completed_at = _now()
             self.db.commit()
-            logger.info("audit run %s completed: %s", audit_run.id, overall_summary)
+            logger.info("audit run %s completed: %s", active_run_id, overall_summary)
             return audit_run
 
         except Exception as exc:
             self.db.rollback()
-            audit_run = self.db.get(AuditRun, audit_run_id)
+            audit_run = self.db.get(AuditRun, active_run_id)
             if audit_run:
                 audit_run.status = "failed"
                 audit_run.error = str(exc)
                 audit_run.completed_at = _now()
                 self.db.commit()
-            logger.exception("audit run %s failed", audit_run_id)
+            logger.exception("audit run %s failed", active_run_id)
             raise
 
     # -- Read Models for Selection --------------------------------------------

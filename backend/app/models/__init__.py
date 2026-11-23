@@ -17,6 +17,7 @@ from app.models.experiment import (
     PromptTemplate,
     PromptVersion,
 )
+from app.models.game import GameMove, GameRun
 from app.models.job import Job
 
 __all__ = [
@@ -49,4 +50,6 @@ __all__ = [
     "AttributionCondition",
     "AuditRun",
     "ModelAvailability",
+    "GameRun",
+    "GameMove",
 ]

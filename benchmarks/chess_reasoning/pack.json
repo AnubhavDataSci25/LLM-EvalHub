@@ -1,0 +1,36 @@
+{
+  "key": "chess_reasoning",
+  "name": "Reasoning Arena: Chess",
+  "description": "Objective reasoning benchmark testing spatial reasoning, tactical calculation, and strict rule adherence using verified chess positions, puzzles, and move quality metrics.",
+  "use_case": "game_reasoning",
+  "metrics": [
+    "legal_move_rate",
+    "format_compliance_rate",
+    "puzzle_accuracy",
+    "mate_found_rate",
+    "avg_centipawn_loss",
+    "blunder_rate",
+    "latency"
+  ],
+  "rag_recommended": false,
+  "dataset": "dataset.json",
+  "documents": [],
+  "license": "Creative Commons CC0 (Public Domain)",
+  "attribution": "Sourced and verified using python-chess. Tactical themes inspired by open lichess.org puzzle taxonomy (CC0).",
+  "default_config": {
+    "temperature": 0.0,
+    "max_tokens": 250,
+    "prompt_variant": "fen_only",
+    "think_step_by_step": false,
+    "system_prompt": "You are a chess reasoning system. Analyze the position and provide your chosen move."
+  },
+  "metric_notes": {
+    "legal_move_rate": "Baseline reasoning floor: proportion of attempted moves that obey the official FIDE chess rules.",
+    "format_compliance_rate": "Proportion of responses containing clean, parseable SAN or UCI moves.",
+    "puzzle_accuracy": "Accuracy on objective tactical puzzle solutions.",
+    "mate_found_rate": "Ability to recognize and execute immediate or forced checkmates.",
+    "avg_centipawn_loss": "Stockfish evaluation loss relative to the optimal move (unavailable if Stockfish is not installed).",
+    "blunder_rate": "Proportion of moves losing >300 centipawns compared to engine evaluation.",
+    "latency": "Move calculation and generation response time."
+  }
+}

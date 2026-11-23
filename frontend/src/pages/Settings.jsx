@@ -33,6 +33,7 @@ import {
   LoadingState,
   Modal,
   PageHeader,
+  ProgressBar,
   Reveal,
   SectionHeader,
   StatusBadge,
@@ -55,6 +56,7 @@ export default function Settings() {
   const [dryRunLoading, setDryRunLoading] = useState(false)
   const [dryRunEstimate, setDryRunEstimate] = useState(null)
   const [auditRunning, setAuditRunning] = useState(false)
+  const [auditProgress, setAuditProgress] = useState(null)
 
   const { currentWorkspace, role } = useAuth()
   const isOwner = role === 'owner'
@@ -215,22 +217,82 @@ export default function Settings() {
     }
   }
 
+  const finishAudit = (res) => {
+    const count = res.summary?.total_probed || res.items?.length || 0
+    toast.success(
+      `Audit complete: ${count} models probed.`,
+      'Model Availability Audit',
+    )
+    setAuditModalOpen(false)
+    setAuditRunning(false)
+    setAuditProgress(null)
+    refetchStatus()
+    refetchAllModels()
+    refetch()
+  }
+
   const startAudit = async () => {
     setAuditRunning(true)
+    setAuditProgress({
+      status: 'Initializing probe session…',
+      probed: 0,
+      total: dryRunEstimate?.estimated_calls || 1,
+      by_status: {},
+    })
     try {
-      const res = await api.runProviderAudit({ dry_run: false, max_probes_per_provider: maxProbes })
-      toast.success(
-        `Audit complete: ${res.summary?.total_probed || 0} models probed.`,
-        'Model Availability Audit',
-      )
-      setAuditModalOpen(false)
-      refetchStatus()
-      refetchAllModels()
-      refetch()
+      const initRes = await api.runProviderAudit({
+        dry_run: false,
+        max_probes_per_provider: maxProbes,
+        background: true,
+      })
+      const auditId = initRes.id || initRes.audit_run_id
+
+      if (initRes.status === 'COMPLETED') {
+        finishAudit(initRes)
+        return
+      }
+
+      const pollInterval = 1500
+      const maxPolls = 180 // up to 4.5 minutes
+      let polls = 0
+
+      const pollTimer = setInterval(async () => {
+        polls += 1
+        try {
+          const run = await api.getProviderAudit(auditId)
+          const totalProbed = run.summary?.total_probed || run.items?.length || 0
+          const targetTotal = dryRunEstimate?.estimated_calls || run.summary?.total_candidates || Math.max(totalProbed, 1)
+
+          setAuditProgress({
+            status: run.status === 'COMPLETED' ? 'Completed' : 'Probing models with live generations…',
+            probed: totalProbed,
+            total: targetTotal,
+            by_status: run.summary?.by_status || {},
+          })
+
+          if (run.status === 'COMPLETED') {
+            clearInterval(pollTimer)
+            finishAudit(run)
+          } else if (run.status === 'failed') {
+            clearInterval(pollTimer)
+            setAuditRunning(false)
+            setAuditProgress(null)
+            toast.error(run.error || 'Audit encountered an error.', 'Audit failed')
+          } else if (polls >= maxPolls) {
+            clearInterval(pollTimer)
+            setAuditRunning(false)
+            setAuditProgress(null)
+            toast.warn('Audit is taking longer than expected. You can check results by refreshing.', 'Audit In Progress')
+            setAuditModalOpen(false)
+          }
+        } catch {
+          // ignore transient poll error and retry next interval
+        }
+      }, pollInterval)
     } catch (err) {
-      toast.error(err.message, 'Audit failed')
-    } finally {
       setAuditRunning(false)
+      setAuditProgress(null)
+      toast.error(err.message, 'Audit failed')
     }
   }
 
@@ -728,71 +790,102 @@ export default function Settings() {
       <Modal
         open={auditModalOpen}
         onClose={() => !auditRunning && setAuditModalOpen(false)}
-        title="Run Model Availability Audit"
-        description="Verifies discovered models across all configured providers with a minimal 8-token generation probe."
+        title={auditRunning ? "Running Model Availability Audit…" : "Run Model Availability Audit"}
+        description={
+          auditRunning
+            ? "Executing verification probes with bounded concurrency in the background."
+            : "Verifies discovered models across all configured providers with a minimal 8-token generation probe."
+        }
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="ghost" disabled={auditRunning} onClick={() => setAuditModalOpen(false)}>
-              Cancel
+              {auditRunning ? 'Running…' : 'Cancel'}
             </Button>
             <Button variant="primary" loading={auditRunning} icon={Play} onClick={startAudit}>
-              Confirm & Run Audit
+              {auditRunning ? 'Auditing in progress…' : 'Confirm & Run Audit'}
             </Button>
           </div>
         }
       >
         <div className="space-y-4">
-          <Field
-            label="Max probes per provider"
-            hint="Limits calls to protect rate limits and free quotas (1 - 50)."
-          >
-            <Input
-              type="number"
-              min={1}
-              max={50}
-              value={maxProbes}
-              onChange={(e) => handleMaxProbesChange(e.target.value)}
-              disabled={auditRunning}
-            />
-          </Field>
-
-          {dryRunLoading ? (
-            <p className="prose-note text-xs">Estimating call volume…</p>
-          ) : dryRunEstimate ? (
-            <div className="rounded-lg border border-line bg-surface/50 p-3.5 space-y-2">
+          {auditRunning && auditProgress ? (
+            <div className="rounded-xl border border-line bg-surface/80 p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs text-muted font-medium">Estimated Cheap Probes:</span>
-                <span className="mono font-semibold text-ink text-sm">
-                  {dryRunEstimate.estimated_calls} calls
+                <span className="text-xs font-semibold text-accent flex items-center gap-1.5">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  {auditProgress.status}
+                </span>
+                <span className="mono text-xs font-semibold text-ink">
+                  {auditProgress.probed} / {auditProgress.total} probed
                 </span>
               </div>
-              <div className="text-[0.75rem] text-muted space-y-1">
-                <p>Providers targeted: {dryRunEstimate.providers_targeted?.join(', ') || 'None'}</p>
-                {dryRunEstimate.by_provider && (
-                  <div className="flex flex-wrap gap-1.5 mt-1">
-                    {Object.entries(dryRunEstimate.by_provider).map(([p, count]) => (
-                      <span key={p} className="mono bg-overlay px-1.5 py-0.5 rounded text-[0.7rem]">
-                        {p}: {count}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {dryRunEstimate.warnings?.length > 0 && (
-                <div className="mt-2 space-y-1">
-                  {dryRunEstimate.warnings.map((w, idx) => (
-                    <p key={idx} className="text-xs text-amber-600 dark:text-amber-400">
-                      • {w}
-                    </p>
+              <ProgressBar
+                value={auditProgress.total > 0 ? auditProgress.probed / auditProgress.total : 0}
+                showValue={false}
+              />
+              {Object.keys(auditProgress.by_status).length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {Object.entries(auditProgress.by_status).map(([st, cnt]) => (
+                    <StatusBadge key={st} tone={getStatusBadgeTone(st)} label={`${st}: ${cnt}`} />
                   ))}
                 </div>
               )}
             </div>
-          ) : null}
+          ) : (
+            <>
+              <Field
+                label="Max probes per provider"
+                hint="Limits calls to protect rate limits and free quotas (1 - 50)."
+              >
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={maxProbes}
+                  onChange={(e) => handleMaxProbesChange(e.target.value)}
+                  disabled={auditRunning}
+                />
+              </Field>
 
-          <InlineNote tone="info" icon={Info}>
-            Probes run concurrently with bounded concurrency. If an invalid credential or quota exhaustion is encountered on a provider, further probes for that provider stop immediately.
-          </InlineNote>
+              {dryRunLoading ? (
+                <p className="prose-note text-xs">Estimating call volume…</p>
+              ) : dryRunEstimate ? (
+                <div className="rounded-lg border border-line bg-surface/50 p-3.5 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted font-medium">Estimated Cheap Probes:</span>
+                    <span className="mono font-semibold text-ink text-sm">
+                      {dryRunEstimate.estimated_calls} calls
+                    </span>
+                  </div>
+                  <div className="text-[0.75rem] text-muted space-y-1">
+                    <p>Providers targeted: {dryRunEstimate.providers_targeted?.join(', ') || 'None'}</p>
+                    {dryRunEstimate.by_provider && (
+                      <div className="flex flex-wrap gap-1.5 mt-1">
+                        {Object.entries(dryRunEstimate.by_provider).map(([p, count]) => (
+                          <span key={p} className="mono bg-overlay px-1.5 py-0.5 rounded text-[0.7rem]">
+                            {p}: {count}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {dryRunEstimate.warnings?.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {dryRunEstimate.warnings.map((w, idx) => (
+                        <p key={idx} className="text-xs text-amber-600 dark:text-amber-400">
+                          • {w}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+
+              <InlineNote tone="info" icon={Info}>
+                Probes run concurrently with bounded concurrency. If an invalid credential or quota exhaustion is encountered on a provider, further probes for that provider stop immediately.
+              </InlineNote>
+            </>
+          )}
         </div>
       </Modal>
     </>

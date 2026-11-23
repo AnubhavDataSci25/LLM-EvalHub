@@ -50,6 +50,13 @@ PROFILES: dict[str, dict[str, float]] = {
     "quality": {"correctness": 0.45, "faithfulness": 0.30, "answer_relevance": 0.20, "latency": 0.05},
     "faithfulness": {"faithfulness": 0.50, "correctness": 0.25, "context_recall": 0.15, "answer_relevance": 0.10},
     "latency": {"latency": 0.45, "correctness": 0.25, "faithfulness": 0.20, "answer_relevance": 0.10},
+    "game_reasoning": {
+        "legal_move_rate": 0.35,
+        "puzzle_accuracy": 0.30,
+        "blunder_rate": 0.15,
+        "format_compliance_rate": 0.10,
+        "latency": 0.10,
+    },
 }
 
 PROFILE_DESCRIPTIONS = {
@@ -57,10 +64,11 @@ PROFILE_DESCRIPTIONS = {
     "quality": "Prioritises getting the answer right; tolerates slower responses.",
     "faithfulness": "Prioritises grounding — for RAG and compliance-sensitive use cases.",
     "latency": "Prioritises response time for interactive products, with quality floors.",
+    "game_reasoning": "Prioritises strict rule following, puzzle accuracy and tactical soundness for reasoning and game applications.",
     "custom": "User-supplied weights.",
 }
 
-RANKABLE_METRICS = [k for k, s in METRIC_SPECS.items() if s.group in {"quality", "retrieval"}]
+RANKABLE_METRICS = [k for k, s in METRIC_SPECS.items() if s.group in {"quality", "retrieval", "game_reasoning"}]
 
 
 def _describe_driver(metric: str, detail: dict[str, Any]) -> str:

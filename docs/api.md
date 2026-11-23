@@ -189,3 +189,17 @@ Each item in `metric_deltas` and `latency_analysis` includes:
 | GET | `/calibration/runs/{id}` | Full calibration report with agreement matrix, bias summary, and probe results |
 | GET | `/calibration/reliability` | Latest reliability summary for `provider`, `model`, and `metric` |
 
+## Reasoning Arena (Chess)
+
+| Method | Path | Notes |
+|---|---|---|
+| GET | `/arena/chess/status` | Host Stockfish engine availability, detected path, version, and default configurations |
+| GET | `/arena/chess/summary` | Workspace aggregate stats (completed runs, model/engine wins, draws, forfeits, overall legal move %) |
+| POST | `/arena/chess/dry-run` | Upper bound estimation for provider API calls and tokens before starting a game |
+| POST | `/arena/chess/runs` | Execute an arena game run or dry-run estimation (`dry_run: true`) with bounded plies and retry recovery |
+| GET | `/arena/chess/runs` | List recorded arena game runs |
+| GET | `/arena/chess/runs/{id}` | Fetch arena run by ID with all move history, legality badges, and engine evaluations |
+| GET | `/arena/chess/runs/{id}/games` | Get games belonging to an arena run |
+| GET | `/arena/chess/games/{id}` | Direct lookup for a game with full ply-by-ply moves |
+
+

@@ -232,6 +232,78 @@ REMEDIATIONS: dict[str, list[dict[str, Any]]] = {
             "expected_improvement": "latency down; watch context_recall.",
         },
     ],
+    "illegal_move": [
+        {
+            "action": "prompt_variant",
+            "parameter": "system_prompt",
+            "detail": "Switch prompt representation from FEN-only to FEN with ASCII board and legal moves list to ground spatial reasoning.",
+            "expected_improvement": "legal_move_rate should improve significantly.",
+        },
+        {
+            "action": "think_step_by_step",
+            "parameter": "system_prompt",
+            "detail": "Add step-by-step reasoning instructions before stating the final move.",
+            "expected_improvement": "reduces illegal moves caused by reflexive generation.",
+        },
+        {
+            "action": "switch_model",
+            "parameter": "model",
+            "detail": "Test a model with higher spatial and rule-following benchmarks.",
+            "expected_improvement": "higher baseline rule compliance.",
+        },
+    ],
+    "unparseable_move": [
+        {
+            "action": "clarify_prompt",
+            "parameter": "system_prompt",
+            "detail": "Enforce strict single-line output format like 'Final Move: <move>' in SAN/UCI notation.",
+            "expected_improvement": "format_compliance_rate should rise to 100%.",
+        },
+    ],
+    "wrong_color_or_turn_confusion": [
+        {
+            "action": "clarify_prompt",
+            "parameter": "system_prompt",
+            "detail": "Emphasize active color to move ('It is White\'s turn') at both the start and end of the prompt.",
+            "expected_improvement": "eliminates opponent turn hallucination.",
+        },
+        {
+            "action": "prompt_variant",
+            "parameter": "system_prompt",
+            "detail": "Provide the explicit list of legal moves available to the active color.",
+            "expected_improvement": "constrains choice to active player.",
+        },
+    ],
+    "blunder": [
+        {
+            "action": "think_step_by_step",
+            "parameter": "system_prompt",
+            "detail": "Require the model to identify opponent threats and candidate responses before choosing a move.",
+            "expected_improvement": "blunder_rate should decrease.",
+        },
+        {
+            "action": "switch_model",
+            "parameter": "model",
+            "detail": "Evaluate larger reasoning models with deeper search capabilities.",
+            "expected_improvement": "lower average centipawn loss.",
+        },
+    ],
+    "missed_mate": [
+        {
+            "action": "think_step_by_step",
+            "parameter": "system_prompt",
+            "detail": "Prompt the model to calculate forcing lines (checks, captures, threats) first.",
+            "expected_improvement": "mate_found_rate should rise.",
+        },
+    ],
+    "missed_tactic": [
+        {
+            "action": "think_step_by_step",
+            "parameter": "system_prompt",
+            "detail": "Instruct the model to scan for tactical motifs (pins, forks, skewers, discovered attacks).",
+            "expected_improvement": "puzzle_accuracy should improve.",
+        },
+    ],
 }
 
 GROUNDING_PROMPT_SUGGESTION = (
@@ -268,6 +340,8 @@ def _suggestion_value(action: str, experiment: Experiment | None) -> Any:
         "strengthen_grounding_prompt": GROUNDING_PROMPT_SUGGESTION,
         "add_citation_requirement": CITATION_PROMPT_SUGGESTION,
         "clarify_prompt": CLARITY_PROMPT_SUGGESTION,
+        "prompt_variant": "fen_ascii_legal",
+        "think_step_by_step": "Think step by step analyzing threats, tactics, and candidate moves. Conclude with: 'Final Move: <move>'.",
         "lower_temperature": 0.0,
         "switch_model": None,
         "none": None,
@@ -463,6 +537,12 @@ class DiagnosisService:
                 "timeout": "The provider did not respond within the configured timeout.",
                 "provider_error": "The request failed at the provider before any answer was generated.",
                 "high_latency": "Answer quality was acceptable but the response exceeded the latency budget.",
+                "illegal_move": "The model proposed a move that violates the rules of chess in this position.",
+                "unparseable_move": "The model output did not follow the required SAN or UCI move format.",
+                "wrong_color_or_turn_confusion": "The model suffered turn confusion and generated a move legal only for the opponent.",
+                "blunder": "The model selected a move that severely damages its position evaluation against the engine.",
+                "missed_mate": "The model missed a forced checkmate in 1 or 2 moves.",
+                "missed_tactic": "The model missed the tactical winning sequence in the puzzle.",
             }.get(failure_type, "The measured scores fell below the configured thresholds.")
 
         suggestions = []

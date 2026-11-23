@@ -67,6 +67,11 @@ class MockProvider(LLMProvider):
         "available",
         "embed_text",
         "guard_classifier",
+        "chess_legal",
+        "chess_illegal",
+        "chess_unparseable",
+        "chess_blunder",
+        "chess_verbose",
     )
 
     def __init__(self, api_key: str | None = None, base_url: str | None = None) -> None:
@@ -186,6 +191,40 @@ class MockProvider(LLMProvider):
             })
         if behaviour == "always_fail":
             return "Incorrect answer: fabricated information that contradicts ground truth."
+
+        if behaviour.startswith("chess_"):
+            import chess
+
+            from app.evaluation.games.chess_metrics import extract_fen
+
+            fen = extract_fen(prompt)
+            board = chess.Board(fen) if fen else chess.Board()
+
+            if behaviour == "chess_unparseable":
+                return "I recommend playing defensively and maintaining king safety without specifying moves."
+            if behaviour == "chess_illegal":
+                return "Final Move: Ke9"
+            if behaviour == "chess_blunder":
+                moves = list(board.legal_moves)
+                chosen = moves[-1] if len(moves) > 1 else (moves[0] if moves else None)
+                san = board.san(chosen) if chosen else "e4"
+                return f"Final Move: {san}"
+            if behaviour == "chess_verbose":
+                moves = list(board.legal_moves)
+                chosen = moves[0] if moves else None
+                san = board.san(chosen) if chosen else "e4"
+                return (
+                    "Thinking step by step:\n"
+                    "1. Candidate move calculation for current position.\n"
+                    "2. Tactical scan shows immediate positional advantages.\n\n"
+                    f"Final Move: {san}"
+                )
+            # Default chess_legal
+            moves = list(board.legal_moves)
+            chosen = moves[0] if moves else None
+            san = board.san(chosen) if chosen else "e4"
+            return f"Final Move: {san}"
+
         context, question = self._split_prompt(prompt)
         q_tokens = _tokens(question)
 

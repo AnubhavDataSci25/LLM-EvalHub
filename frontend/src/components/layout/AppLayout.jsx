@@ -20,6 +20,7 @@ import {
   Scale,
   Settings,
   Sun,
+  Swords,
   X,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -50,6 +51,7 @@ const NAV_SECTIONS = [
     label: 'Analysis',
     items: [
       { to: '/experiments', label: 'Experiments', icon: FlaskConical },
+      { to: '/arena/chess', label: 'Reasoning Arena', icon: Swords },
       { to: '/compare', label: 'Compare', icon: GitCompare },
       { to: '/failures', label: 'Failures', icon: Activity },
       { to: '/recommendations', label: 'Recommendations', icon: Lightbulb },

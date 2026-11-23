@@ -270,6 +270,15 @@ export const api = {
   calibrationRun: (id) => get(`/calibration/runs/${id}`),
   judgeReliability: (params) => get('/calibration/reliability', { params }),
 
+  // Reasoning Arena: Chess
+  arenaChessStatus: () => get('/arena/chess/status'),
+  arenaChessSummary: () => get('/arena/chess/summary'),
+  arenaChessDryRun: (body) => post('/arena/chess/dry-run', body),
+  arenaChessRuns: (params) => get('/arena/chess/runs', { params }),
+  createArenaChessRun: (body) => post('/arena/chess/runs', body),
+  arenaChessRun: (id) => get(`/arena/chess/runs/${id}`),
+  arenaChessGame: (id) => get(`/arena/chess/games/${id}`),
+
   docUrls: () => getApiDocUrls(),
 }
 

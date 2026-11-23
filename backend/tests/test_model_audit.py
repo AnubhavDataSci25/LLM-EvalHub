@@ -292,6 +292,24 @@ def test_api_providers_audit_execution(client):
     assert get_resp.json()["id"] == audit_id
 
 
+def test_api_providers_audit_background_execution(client):
+    """POST /api/providers/audit with background=True returns immediately with run handle."""
+    resp = client.post(
+        "/api/providers/audit",
+        json={"dry_run": False, "background": True, "providers": ["mock"], "max_probes_per_provider": 3},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "id" in data
+    assert data["status"] in ("running", "COMPLETED")
+
+    # In TestClient, BackgroundTasks runs upon response; check run by ID
+    audit_id = data["id"]
+    get_resp = client.get(f"/api/providers/audit/{audit_id}")
+    assert get_resp.status_code == 200
+    assert get_resp.json()["id"] == audit_id
+
+
 def test_api_providers_status_and_models(client):
     """GET /api/providers/status and /api/providers/models return honest audit status."""
     # Status

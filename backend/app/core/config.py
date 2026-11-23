@@ -103,6 +103,15 @@ class Settings(BaseSettings):
     max_probe_concurrency: int = 3
     probe_timeout_seconds: float = 10.0
 
+    # --- Reasoning Arena & Chess Settings -------------------------------
+    stockfish_path: str | None = None
+    stockfish_depth: int = 10
+    stockfish_nodes: int | None = None
+    stockfish_skill_level: int = 5
+    blunder_threshold_cp: int = 300
+    game_max_moves: int = 60
+    game_max_retries: int = 1
+
     # --- RAG -------------------------------------------------------------
     embedding_backend: str = Field(default="hashing")  # hashing | gemini | sentence-transformers
     embedding_model: str = "text-embedding-004"
